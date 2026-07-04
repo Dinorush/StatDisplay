@@ -1,0 +1,7 @@
+.vs/
+*.vs
+
+*bin/
+*lib/
+*obj/
+*GameFolder.props

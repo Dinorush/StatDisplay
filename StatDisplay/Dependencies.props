@@ -1,0 +1,34 @@
+<Project InitialTargets="ValidateGamePath">
+	<Import Project="$(MSBuildThisFileDirectory)\GameFolder.props" Condition="Exists('$(MSBuildThisFileDirectory)\GameFolder.props')" />
+
+	<Target Name="ValidateGamePath">
+		<Error Text="The GameFolder property must be set to the Game folder." Condition="'$(GameFolder)' == '' or !Exists('$(GameFolder)')" />
+	</Target>
+
+	<!-- Path Properties -->
+	<PropertyGroup>
+		<BIELibsFolder>$(GameFolder)\BepInEx\core</BIELibsFolder>
+		<PluginsFolder>$(GameFolder)\BepInEx\plugins</PluginsFolder>
+		<GameAssembliesFolder>$(GameFolder)\BepInEx\interop</GameAssembliesFolder>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+	</PropertyGroup>
+
+	<!-- Assemblies -->
+	<ItemGroup>
+		<!-- BepInEx -->
+		<Reference Include="$(BIELibsFolder)\BepInEx.*.dll" Private="false" />
+		<Reference Include="$(BIELibsFolder)\0Harmony.dll" Private="false" />
+		<Reference Include="$(BIELibsFolder)\Il2CppInterop.Runtime.dll" Private="false" />
+
+		<!-- Game Assemblies -->
+		<Reference Include="$(GameAssembliesFolder)/*.dll" Private="false" />
+		<Reference Remove="$(GameAssembliesFolder)/netstandard.dll" />
+		<Reference Remove="$(GameAssembliesFolder)/mscorlib.dll" />
+		<Reference Remove="$(GameAssembliesFolder)/Newtonsoft.Json.dll" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="$(PluginsFolder)/GTFO-API.dll" Private="false" />
+		<Reference Include="$(PluginsFolder)/**/ExtraWeaponCustomization.dll" Private="false" />
+	</ItemGroup>
+</Project>
