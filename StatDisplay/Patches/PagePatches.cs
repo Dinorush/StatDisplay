@@ -55,8 +55,9 @@ namespace StatDisplay.Patches
             }
         }
 
-        private static string GetDamageText(StatData data, DamSlotType slot, bool includePipe = true)
+        private static string GetDamageText(StatData? data, DamSlotType slot, bool includePipe = true)
         {
+            if (data == null) return "";
             return (includePipe ? " | " : "") + $"<#a0a0a0>{(ulong)data.GetDamage(slot, DamStatType.Any)}</color> (<#ffff00>{(ulong)data.GetDamage(slot, DamStatType.Crit)}</color>)";
         }
 
@@ -129,7 +130,9 @@ namespace StatDisplay.Patches
 
         private static void PopulateReport(CM_PageExpeditionSuccess successPage, CM_PageSuccess_PrisonerEvaluation report, SNet_Player player, bool isFail, int index)
         {
-            if (!StatHandler.TryGetData(player, out var data)) return;
+            bool hasData = StatHandler.TryGetData(player, out var data);
+            if (!hasData && !isFail) return;
+
             if (!PlayerBackpackManager.TryGetBackpack(player, out var backpack)) return;
 
             if (isFail)
@@ -160,7 +163,10 @@ namespace StatDisplay.Patches
             {
                 sb.AppendLine(archName + GetDamageText(data, DamSlotType.Melee));
             }
-            sb.Append($"Total: {GetDamageText(data, DamSlotType.All, includePipe: false)}</color>");
+
+            if (hasData)
+                sb.Append($"Total: {GetDamageText(data, DamSlotType.All, includePipe: false)}");
+            sb.Append("</color>");
             report.m_gear.text = sb.ToString();
 
             sb.Clear();
@@ -190,16 +196,23 @@ namespace StatDisplay.Patches
                 sb.AppendLine(Text.Format(900u, "<color=white>" + infectionText + "</color>"));
             }
 
-            if (hasMainName)
-                sb.AppendLine(mainName + $"<color=white>: {data.StatText.GetEndscreenText(InventorySlot.GearStandard)}</color>");
+            if (hasData)
+            {
+                if (hasMainName)
+                    sb.AppendLine(mainName + $"<color=white>: {data!.StatText.GetEndscreenText(InventorySlot.GearStandard)}</color>");
+                else
+                    sb.AppendLine(Text.Format(901u, "<color=white>" + successPage.RandMentalStatus() + "</color>"));
+                if (hasSpecialName)
+                    sb.AppendLine(specialName + $"<color=white>: {data!.StatText.GetEndscreenText(InventorySlot.GearSpecial)}</color>");
+                else
+                    sb.AppendLine(Text.Format(915u, "<color=white>" + successPage.RandAmount() + "</color>"));
+                // HACK - Any invalid InventorySlot uses SlotType.All, and the internal restriction check is only != None.
+                sb.Append($"Total: {data!.StatText.GetEndscreenText(InventorySlot.ResourcePack)}</color>");
+            }
             else
-                sb.AppendLine(Text.Format(901u, "<color=white>" + successPage.RandMentalStatus() + "</color>"));
-            if (hasSpecialName)
-                sb.AppendLine(specialName + $"<color=white>: {data.StatText.GetEndscreenText(InventorySlot.GearSpecial)}</color>");
-            else
-                sb.AppendLine(Text.Format(915u, "<color=white>" + successPage.RandAmount() + "</color>"));
-            // HACK - Any invalid InventorySlot uses SlotType.All, and the internal restriction check is only != None.
-            sb.Append($"Total: {data.StatText.GetEndscreenText(InventorySlot.ResourcePack)}</color>");
+            {
+                sb.Append($"Missing StatDisplay");
+            }
 
             report.m_eval.text = sb.ToString();
             if (isFail)
