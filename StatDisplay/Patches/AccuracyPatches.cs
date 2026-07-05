@@ -18,7 +18,7 @@ namespace StatDisplay.Patches
             public AccSlotType slot;
             public ulong lookup;
             public readonly bool[,] history;
-            public readonly ushort[,] delta;
+            public readonly short[,] delta;
 
             public readonly bool Valid => slot != AccSlotType.All;
 
@@ -28,7 +28,7 @@ namespace StatDisplay.Patches
                 lookup = 0;
                 // Exclude FullShot and Fired (unused for history)
                 history = new bool[(int)AccShotType.Count - 1, (int)AccStatType.Count - 1];
-                delta = new ushort[(int)AccShotType.Count, (int)AccStatType.Count];
+                delta = new short[(int)AccShotType.Count, (int)AccStatType.Count];
             }
         }
 

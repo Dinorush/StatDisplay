@@ -47,12 +47,12 @@ namespace StatDisplay.Dependencies
             {
                 if (accuracy.Slot == InventorySlot.GearClass) return;
 
-                ushort[,] deltaArr = new ushort[(int)AccShotType.Count, (int)AccStatType.Count];
+                short[,] deltaArr = new short[(int)AccShotType.Count, (int)AccStatType.Count];
                 void Copy(AccShotType shotType, StatDelta stat)
                 {
-                    deltaArr[(int)shotType, (int)AccStatType.Hit] = (ushort)stat.Hits;
-                    deltaArr[(int)shotType, (int)AccStatType.Crit] = (ushort)stat.Crits;
-                    deltaArr[(int)shotType, (int)AccStatType.Fired] = (ushort)stat.Count;
+                    deltaArr[(int)shotType, (int)AccStatType.Hit] = (short)stat.Hits;
+                    deltaArr[(int)shotType, (int)AccStatType.Crit] = (short)stat.Crits;
+                    deltaArr[(int)shotType, (int)AccStatType.Fired] = (short)stat.Count;
                 }
                 Copy(AccShotType.Shot, delta.Shots);
                 Copy(AccShotType.Group, delta.Groups);

@@ -9,11 +9,11 @@ namespace StatDisplay.Data
         {
             protected readonly StatData _data;
             public Retriever(StatData data) => _data = data;
-            public abstract ulong Value { get; }
+            public abstract long Value { get; }
         }
 
-        private readonly ulong[,,] _accData;
-        private readonly ushort[,,] _deltaAccData;
+        private readonly long[,,] _accData;
+        private readonly short[,,] _deltaAccData;
         private readonly double[,] _damData;
         private readonly float[,] _deltaDamData;
         private bool _needsAccSync = false;
@@ -22,17 +22,17 @@ namespace StatDisplay.Data
 
         public StatData(SNet_Player player)
         {
-            _accData = new ulong[(int)AccSlotType.Count, (int)AccShotType.Count, (int)AccStatType.Count];
-            _deltaAccData = new ushort[(int)AccSlotType.Count, (int)AccShotType.Count, (int)AccStatType.Count];
+            _accData = new long[(int)AccSlotType.Count, (int)AccShotType.Count, (int)AccStatType.Count];
+            _deltaAccData = new short[(int)AccSlotType.Count, (int)AccShotType.Count, (int)AccStatType.Count];
             _damData = new double[(int)DamSlotType.Count, (int)DamStatType.Count];
             _deltaDamData = new float[(int)DamSlotType.Count, (int)DamStatType.Count];
 
             StatText = new StatParser(this, player);
         }
 
-        public ulong GetAccuracy(AccSlotType slot, AccShotType shot, AccStatType stat)
+        public long GetAccuracy(AccSlotType slot, AccShotType shot, AccStatType stat)
         {
-            ulong value;
+            long value;
             if (slot == AccSlotType.All)
                 value = _accData[(int)AccSlotType.Main, (int)shot, (int)stat] + _accData[(int)AccSlotType.Special, (int)shot, (int)stat];
             else
@@ -71,14 +71,14 @@ namespace StatDisplay.Data
             StatText.Update(true);
         }
 
-        public void AddAccuracy(AccSlotType slot, ushort[,] deltaData)
+        public void AddAccuracy(AccSlotType slot, short[,] deltaData)
         {
             _needsAccSync = true;
             for (int shot = 0; shot < deltaData.GetLength(0); shot++)
             {
                 for (int stat = 0; stat < deltaData.GetLength(1); stat++)
                 {
-                    ushort val = deltaData[shot, stat];
+                    short val = deltaData[shot, stat];
                     _accData[(int)slot, shot, stat] += val;
                     _deltaAccData[(int)slot, shot, stat] += val;
                 }
@@ -101,7 +101,7 @@ namespace StatDisplay.Data
             StatText.Update();
         }
 
-        public bool PopRemoteAccDelta([MaybeNullWhen(false)] out ushort[,,] deltaAccuracy)
+        public bool PopRemoteAccDelta([MaybeNullWhen(false)] out short[,,] deltaAccuracy)
         {
             if (!_needsAccSync)
             {
@@ -109,7 +109,7 @@ namespace StatDisplay.Data
                 return false;
             }
 
-            deltaAccuracy = (ushort[,,])_deltaAccData.Clone();
+            deltaAccuracy = (short[,,])_deltaAccData.Clone();
             for (int slot = 0; slot < _deltaAccData.GetLength(0); slot++)
                 for (int shot = 0; shot < _deltaAccData.GetLength(1); shot++)
                     for (int stat = 0; stat < _deltaAccData.GetLength(2); stat++)
@@ -136,7 +136,7 @@ namespace StatDisplay.Data
             return true;
         }
 
-        public void AddRemoteAccDelta(ushort[,,] deltaData)
+        public void AddRemoteAccDelta(short[,,] deltaData)
         {
             for (int slot = 0; slot < deltaData.GetLength(0); slot++)
                 for (int shot = 0; shot < deltaData.GetLength(1); shot++)
@@ -172,11 +172,11 @@ namespace StatDisplay.Data
                 _isAllSlot = slotType == AccSlotType.All;
             }
 
-            public override ulong Value
+            public override long Value
             {
                 get
                 {
-                    ulong value;
+                    long value;
                     if (_isAllSlot)
                         value = _data._accData[(int)AccSlotType.Main, _shotType, _statType] + _data._accData[(int)AccSlotType.Special, _shotType, _statType];
                     else
@@ -197,7 +197,7 @@ namespace StatDisplay.Data
                 _statType = (int)statType;
                 _isAllSlot = slotType == DamSlotType.All;
             }
-            public override ulong Value
+            public override long Value
             {
                 get
                 {
@@ -209,7 +209,7 @@ namespace StatDisplay.Data
                     }
                     else
                         value += _data._damData[_slotType, _statType];
-                    return (ulong)value;
+                    return (long)value;
                 }
             }
         }

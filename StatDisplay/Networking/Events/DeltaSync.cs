@@ -29,9 +29,9 @@ namespace StatDisplay.Networking.Events
         private const int Count = (int)AccSlotType.Count * (int)AccShotType.Count * (int)AccStatType.Count;
 
         public ulong Lookup;
-        private fixed ushort _deltaData[Count];
+        private fixed short _deltaData[Count];
 
-        public static pAccDeltaData Create(ulong lookup, ushort[,,] deltaData)
+        public static pAccDeltaData Create(ulong lookup, short[,,] deltaData)
         {
             pAccDeltaData packet = new()
             {
@@ -41,11 +41,11 @@ namespace StatDisplay.Networking.Events
             return packet;
         }
 
-        public ushort[,,] DeltaData
+        public short[,,] DeltaData
         {
             get
             {
-                ushort[,,] delta = new ushort[(int)AccSlotType.Count, (int)AccShotType.Count, (int)AccStatType.Count];
+                short[,,] delta = new short[(int)AccSlotType.Count, (int)AccShotType.Count, (int)AccStatType.Count];
                 int count = 0;
                 for (int slot = 0; slot < delta.GetLength(0); slot++)
                     for (int shot = 0; shot < delta.GetLength(1); shot++)

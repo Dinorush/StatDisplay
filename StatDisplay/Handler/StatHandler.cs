@@ -56,7 +56,7 @@ namespace StatDisplay.Handler
         public static bool TryGetData(SNet_Player player, [MaybeNullWhen(false)] out StatData data) => Instance._data.TryGetValue(player.Lookup, out data);
 
         [HideFromIl2Cpp]
-        public static void AddAccuracyDelta(ulong lookup, AccSlotType slot, ushort[,] delta)
+        public static void AddAccuracyDelta(ulong lookup, AccSlotType slot, short[,] delta)
         {
             if (!Instance._data.TryGetValue(lookup, out var data)) return;
 
@@ -71,7 +71,7 @@ namespace StatDisplay.Handler
             data.AddDamage(slot, stat, value);
         }
 
-        public static void AddRemoteAccDelta(ulong lookup, ushort[,,] deltaAccuracy)
+        public static void AddRemoteAccDelta(ulong lookup, short[,,] deltaAccuracy)
         {
             if (!Instance._data.TryGetValue(lookup, out var data)) return;
 
