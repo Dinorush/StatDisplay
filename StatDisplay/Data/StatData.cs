@@ -18,16 +18,18 @@ namespace StatDisplay.Data
         private readonly float[,] _deltaDamData;
         private bool _needsAccSync = false;
         private bool _needsDamSync = false;
-        public StatParser StatText { get; private set; }
+        
+        public bool HasMod { get => StatText.HasMod; set => StatText.HasMod = value; }
+        public readonly StatParser StatText;
 
-        public StatData(SNet_Player player)
+        public StatData(SNet_Player player, bool hasMod)
         {
             _accData = new long[(int)AccSlotType.Count, (int)AccShotType.Count, (int)AccStatType.Count];
             _deltaAccData = new short[(int)AccSlotType.Count, (int)AccShotType.Count, (int)AccStatType.Count];
             _damData = new double[(int)DamSlotType.Count, (int)DamStatType.Count];
             _deltaDamData = new float[(int)DamSlotType.Count, (int)DamStatType.Count];
 
-            StatText = new StatParser(this, player);
+            StatText = new StatParser(this, player, hasMod);
         }
 
         public long GetAccuracy(AccSlotType slot, AccShotType shot, AccStatType stat)

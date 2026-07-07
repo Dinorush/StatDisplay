@@ -30,7 +30,7 @@ namespace StatDisplay.Patches
             public DamSlotType slot;
             public ulong lookup;
 
-            public readonly bool Valid => slot != DamSlotType.All;
+            public readonly bool Valid => slot != DamSlotType.All && lookup != 0;
 
             public CacheInfo()
             {
@@ -40,6 +40,7 @@ namespace StatDisplay.Patches
         }
 
         private static CacheInfo _cache = new();
+        private static readonly Random _random = new();
 
         private static void ClearCache()
         {
@@ -123,15 +124,8 @@ namespace StatDisplay.Patches
 
         private static void CacheTool(PlayerAgent? owner)
         {
-            if (owner == null)
-            {
-                _cache.slot = DamSlotType.All;
-                _cache.lookup = 0;
-                return;
-            }
-
             _cache.slot = DamSlotType.Tool;
-            _cache.lookup = owner.Owner.Lookup;
+            _cache.lookup = owner?.Owner.Lookup ?? 0;
         }
 
         [HarmonyPatch(typeof(Dam_EnemyDamageBase), nameof(Dam_EnemyDamageBase.BulletDamage))]
@@ -176,11 +170,36 @@ namespace StatDisplay.Patches
         [HarmonyPostfix]
         private static void Post_RecvBulletDamage(Dam_EnemyDamageBase __instance, pBulletDamageData data, float __state)
         {
-            if (CacheDamageHost(__instance, data.limbID, __state)) return;
-            if (data.gearCategoryId == 0) return;
+            // Sentry gun without an owner (level spawned) should be ignored.
+            if (CacheDamageHost(__instance, data.limbID, __state) || _cache.slot == DamSlotType.Tool) return;
 
-            var slot = (DamSlotType)(data.gearCategoryId - 1);
-            if (slot >= DamSlotType.Count) return;
+            DamSlotType slot;
+            if (data.gearCategoryId > 0)
+            {
+                slot = (DamSlotType)(data.gearCategoryId - 1);
+                if (slot >= DamSlotType.Count) return;
+            }
+            else // Unmodded client
+            {
+                if (!data.source.TryGet(out var agent)) return;
+                var player = agent.Cast<PlayerAgent>();
+                var inventory = player.Inventory.Cast<PlayerInventorySynced>();
+                if (inventory.m_equipStatus == PlayerInventorySynced.EquipStatus.Unequipping)
+                {
+                    slot = inventory.m_queuedEquipItem.AmmoType switch
+                    {
+                        AmmoType.Standard => DamSlotType.Main,
+                        AmmoType.Special => DamSlotType.Special,
+                        _ => inventory.WieldedSlot.ToDamSlotType(),
+                    };
+                }
+                else
+                    slot = inventory.WieldedSlot.ToDamSlotType();
+
+                // Indeterminate; received bullet damage but source gun is unobtainable. 
+                if (slot != DamSlotType.Main && slot != DamSlotType.Special)
+                    slot = _random.NextSingle() < 0.5f ? DamSlotType.Main : DamSlotType.Special;
+            }
 
             CacheDamage(__instance, data.limbID, __state, data.source, slot);
         }
@@ -206,7 +225,6 @@ namespace StatDisplay.Patches
         {
             if (!_cache.Valid) return false;
 
-            string name = SNet.TryGetPlayer(_cache.lookup, out var temp) ? temp.NickName : "Unknown";
             DamStatType stat = damBase.DamageLimbs[limbID].m_type == eLimbDamageType.Weakspot ? DamStatType.Crit : DamStatType.Any;
             StatHandler.AddDamage(_cache.lookup, _cache.slot, stat, prevHealth - damBase.Health);
             return true;

@@ -11,27 +11,53 @@ using System.Reflection;
 
 namespace StatDisplay
 {
-    [BepInPlugin("Dinorush." + MODNAME, MODNAME, "1.0.1")]
+    [BepInPlugin("Dinorush." + MODNAME, MODNAME, "1.1.0")]
     [BepInDependency("dev.gtfomodding.gtfo-api", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(EWCWrapper.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(ArchiveWrapper.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
     internal sealed class EntryPoint : BasePlugin
     {
         public const string MODNAME = "StatDisplay";
 
         private IEnumerable<MethodInfo> _cleanupCallbacks = null!;
         private IEnumerable<MethodInfo> _enterCallbacks = null!;
-        private IEnumerable<MethodInfo> _buildDoneCallbacks = null!;
+        private IEnumerable<MethodInfo> _buildStartCallbacks = null!;
+        private Type[] _allTypes = null!;
 
         public override void Load()
         {
-            new Harmony(MODNAME).PatchAll();
+            _allTypes = GetTypesSafe();
+            var harmony = new Harmony(MODNAME);
+            // Per-type patching, avoid Harmony.PatchAll() warnings if Archive doesn't exist
+            foreach (var type in _allTypes)
+                if (type.GetCustomAttribute<HarmonyPatch>() != null)
+                    harmony.PatchAll(type);
+
             CacheFrequentCallbacks();
             InvokeCallbacks<InvokeOnLoadAttribute>();
             LevelAPI.OnLevelCleanup += RunFrequentCallback(_cleanupCallbacks);
             LevelAPI.OnEnterLevel += RunFrequentCallback(_enterCallbacks);
-            LevelAPI.OnBuildDone += RunFrequentCallback(_buildDoneCallbacks);
+            LevelAPI.OnBuildStart += RunFrequentCallback(_buildStartCallbacks);
             AssetAPI.OnStartupAssetsLoaded += InvokeCallbacks<InvokeOnAssetLoadAttribute>;
             Log.LogMessage("Loaded " + MODNAME);
+        }
+
+        private Type[] GetTypesSafe()
+        {
+            IEnumerable<Type> allTypes;
+            try
+            {
+                allTypes = GetType().Assembly.DefinedTypes;
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                allTypes = ex.Types.Where(type => type != null)!;
+            }
+
+            if (!ArchiveWrapper.HasArchive)
+                return allTypes.Where(type => !type.FullName!.Contains("Archive")).ToArray();
+            else
+                return allTypes.ToArray();
         }
 
         private static Action RunFrequentCallback(IEnumerable<MethodInfo> callbacks)
@@ -45,8 +71,7 @@ namespace StatDisplay
 
         private void CacheFrequentCallbacks()
         {
-            Type[] typesFromAssembly = AccessTools.GetTypesFromAssembly(GetType().Assembly);
-            var methods = typesFromAssembly.SelectMany(AccessTools.GetDeclaredMethods).Where(method => method.IsStatic);
+            var methods = _allTypes.SelectMany(AccessTools.GetDeclaredMethods).Where(method => method.IsStatic);
 
             _cleanupCallbacks = from method in methods
                                 where method.GetCustomAttribute<InvokeOnCleanupAttribute>() != null
@@ -56,15 +81,14 @@ namespace StatDisplay
                               where method.GetCustomAttribute<InvokeOnEnterAttribute>() != null
                               select method;
 
-            _buildDoneCallbacks = from method in methods
-                                  where method.GetCustomAttribute<InvokeOnBuildDoneAttribute>() != null
+            _buildStartCallbacks = from method in methods
+                                  where method.GetCustomAttribute<InvokeOnBuildStartAttribute>() != null
                                   select method;
         }
 
         private void InvokeCallbacks<T>() where T : Attribute
         {
-            Type[] typesFromAssembly = AccessTools.GetTypesFromAssembly(GetType().Assembly);
-            IEnumerable<MethodInfo> enumerable = from method in typesFromAssembly.SelectMany(AccessTools.GetDeclaredMethods)
+            IEnumerable<MethodInfo> enumerable = from method in _allTypes.SelectMany(AccessTools.GetDeclaredMethods)
                                                  where method.GetCustomAttribute<T>() != null
                                                  where method.IsStatic
                                                  select method;

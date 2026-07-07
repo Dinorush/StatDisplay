@@ -30,5 +30,6 @@
 	<ItemGroup>
 		<Reference Include="$(PluginsFolder)/GTFO-API.dll" Private="false" />
 		<Reference Include="$(PluginsFolder)/**/ExtraWeaponCustomization.dll" Private="false" />
+		<Reference Include="$(PluginsFolder)\**\TheArchive.Core.dll" Private="false" />
 	</ItemGroup>
 </Project>

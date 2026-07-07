@@ -8,11 +8,27 @@ namespace StatDisplay
 {
     public static class StatManager
     {
-        private static readonly Dictionary<ulong, SNet_Player> _modPlayers = new();
         private static readonly Dictionary<ulong, SNet_Player> _remotePlayers = new();
         public static IReadOnlyCollection<SNet_Player> RemotePlayers => _remotePlayers.Values;
-        public static bool MasterHasMod { get; private set; }
-        public static bool PlayerHasMod(SNet_Player player) => _modPlayers.ContainsKey(player.Lookup);
+        private static bool _masterHasMod = false;
+        public static bool MasterHasMod
+        {
+            get => _masterHasMod;
+            private set
+            {
+                if (_masterHasMod == value) return;
+                _masterHasMod = value;
+
+                foreach (var slot in SNet.Slots.PlayerSlots)
+                    if (slot.player != null && slot.player.IsBot)
+                        StatHandler.AddPlayer(slot.player, MasterHasMod, onlyIfExists: true);
+            }
+        }
+        public static bool PlayerHasMod(SNet_Player player)
+        {
+            if (player.IsLocal || (MasterHasMod && player.IsBot)) return true;
+            return _remotePlayers.ContainsKey(player.Lookup);
+        }
 
         [InvokeOnLoad]
         private static void Init()
@@ -20,49 +36,33 @@ namespace StatDisplay
             SNet_Events.OnMasterChanged += (Action)OnMasterSet;
         }
 
-        internal static void AddPlayer(SNet_Player player)
+        internal static void AddPlayer(SNet_Player player, bool hasMod)
         {
-            if (_modPlayers.TryAdd(player.Lookup, player))
+            if (hasMod)
             {
-                StatHandler.AddPlayer(player);
-                if (!player.IsLocal && !player.IsBot)
-                    _remotePlayers.Add(player.Lookup, player);
-
                 if (player.IsMaster)
-                {
                     MasterHasMod = true;
-                    foreach (var slot in SNet.Slots.PlayerSlots)
-                        if (slot.player != null && slot.player.IsBot)
-                            AddPlayer(slot.player);
-                }
+                if (!player.IsLocal && !player.IsBot)
+                    _remotePlayers.TryAdd(player.Lookup, player);
             }
+            StatHandler.AddPlayer(player, hasMod);
         }
 
         internal static void RemovePlayer(SNet_Player player)
         {
-            if (_modPlayers.Remove(player.Lookup))
-            {
-                StatHandler.RemovePlayer(player);
-                _remotePlayers.Remove(player.Lookup);
-                if (player.IsMaster)
-                {
-                    MasterHasMod = false;
-                    foreach (var slot in SNet.Slots.PlayerSlots)
-                        if (slot.player != null && slot.player.IsBot)
-                            AddPlayer(slot.player);
-                }
-            }
+            StatHandler.RemovePlayer(player);
+            _remotePlayers.Remove(player.Lookup);
         }
 
         internal static void OnMasterSet()
         {
-            MasterHasMod = _modPlayers.ContainsKey(SNet.Master.Lookup);
+            MasterHasMod = SNet.IsMaster || _remotePlayers.ContainsKey(SNet.Master.Lookup);
+            StatHandler.OnMasterSet();
         }
 
         internal static void Clear()
         {
-            MasterHasMod = false;
-            _modPlayers.Clear();
+            _masterHasMod = false;
             _remotePlayers.Clear();
             StatHandler.Clear();
         }

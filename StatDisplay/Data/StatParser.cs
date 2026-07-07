@@ -8,13 +8,15 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 using SNetwork;
+using StatDisplay.Config;
 
 namespace StatDisplay.Data
 {
     public sealed class StatParser
     {
-        const char START_TOKEN = '{';
-        const char END_TOKEN = '}';
+        const char StartToken = '{';
+        const char EndToken = '}';
+        const string NoModFormat = "N/A (<#a0a0a0>{Damage}</color>)";
         public static readonly string[] SlotNames = new string[] { "RED", "GRE", "BLU", "PUR", "EX" };
 
         private List<string> _strings;
@@ -28,7 +30,7 @@ namespace StatDisplay.Data
             get
             {
                 string name;
-                if (Configuration.FormatFullName)
+                if (Configuration.Config.FormatFullName)
                     name = _characterName;
                 else
                     name = _characterSlot < 4 ? SlotNames[_characterSlot] : SlotNames[^1] + (_characterSlot - 3);
@@ -46,8 +48,8 @@ namespace StatDisplay.Data
                 return _text;
             }
         }
-        private TextMeshPro _textMesh = null!;
-        public TextMeshPro TextMesh
+        private TextMeshPro? _textMesh = null;
+        public TextMeshPro? TextMesh
         {
             get => _textMesh;
             set
@@ -57,16 +59,28 @@ namespace StatDisplay.Data
             }
         }
 
+        private bool _hasMod = false;
+        public bool HasMod
+        {
+            get => _hasMod;
+            set
+            {
+                _hasMod = value;
+                SetFormat();
+            }
+        }
+
         private bool _needsUpdate = false;
         private bool _meshNeedsUpdate = false;
 
-        public StatParser(StatData data, SNet_Player player)
+        public StatParser(StatData data, SNet_Player player, bool hasMod)
         {
-            _characterSlot = player.PlayerSlotIndex();
+            _characterSlot = player.CharacterIndex;
             _characterName = player.NickName;
             _parent = data;
+            _hasMod = hasMod;
             SetFormat();
-            Configuration.OnReload += SetFormat;
+            Configuration.Config.OnChanged += SetFormat;
         }
 
         public void UpdateMesh()
@@ -74,7 +88,7 @@ namespace StatDisplay.Data
             if (_meshNeedsUpdate)
             {
                 _meshNeedsUpdate = false;
-                TextMesh.SetText(Text);
+                TextMesh?.SetText(Text);
             }
         }
 
@@ -83,19 +97,19 @@ namespace StatDisplay.Data
             _needsUpdate = true;
             _meshNeedsUpdate = !updateMesh;
             if (updateMesh)
-                TextMesh.SetText(Text);
+                TextMesh?.SetText(Text);
         }
 
         public string GetEndscreenText(InventorySlot slot)
         {
-            ExtractFormatInfo(Configuration.EndScreenFormat, out var builder, out var strings, out var tokens, slot);
+            ExtractFormatInfo(Configuration.Config.EndScreenFormat, out var builder, out var strings, out var tokens, slot);
             return CreateText(builder, strings, tokens);
         }
 
         [MemberNotNull(nameof(_builder), nameof(_strings), nameof(_tokens))]
         private void SetFormat()
         {
-            ExtractFormatInfo(Configuration.Format, out _builder, out _strings, out _tokens);
+            ExtractFormatInfo(_hasMod ? Configuration.Config.Format : NoModFormat, out _builder, out _strings, out _tokens);
             Update();
         }
 
@@ -105,9 +119,9 @@ namespace StatDisplay.Data
             tokens = new();
             int lastIndex = 0;
             int endIndex;
-            for (int index = format.IndexOf(START_TOKEN); index != -1; index = format.IndexOf(START_TOKEN, endIndex + 1))
+            for (int index = format.IndexOf(StartToken); index != -1; index = format.IndexOf(StartToken, endIndex + 1))
             {
-                endIndex = format.IndexOf(END_TOKEN, index + 1);
+                endIndex = format.IndexOf(EndToken, index + 1);
                 if (endIndex == -1) break;
 
                 strings.Add(format[lastIndex..index]);

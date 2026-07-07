@@ -55,13 +55,6 @@ namespace StatDisplay.Patches
             }
         }
 
-        private static string GetDamageText(StatData? data, DamSlotType slot, bool includePipe = true)
-        {
-            if (data == null) return "";
-            return (includePipe ? " | " : "") + $"<#a0a0a0>{(ulong)data.GetDamage(slot, DamStatType.Any)}</color> (<#ffff00>{(ulong)data.GetDamage(slot, DamStatType.Crit)}</color>)";
-        }
-
-
         private readonly static CM_PageSuccess_PrisonerEvaluation[] _failReports = new CM_PageSuccess_PrisonerEvaluation[4];
         private static IntPtr _lastFailPage = IntPtr.Zero;
         [HarmonyPatch(typeof(CM_PageExpeditionFail), nameof(CM_PageExpeditionFail.OnEnable))]
@@ -196,18 +189,14 @@ namespace StatDisplay.Patches
                 sb.AppendLine(Text.Format(900u, "<color=white>" + infectionText + "</color>"));
             }
 
-            if (hasData)
+            if (hasData && data!.HasMod)
             {
                 if (hasMainName)
-                    sb.AppendLine(mainName + $"<color=white>: {data!.StatText.GetEndscreenText(InventorySlot.GearStandard)}</color>");
-                else
-                    sb.AppendLine(Text.Format(901u, "<color=white>" + successPage.RandMentalStatus() + "</color>"));
+                    sb.AppendLine(mainName + $"<color=white>: {data.StatText.GetEndscreenText(InventorySlot.GearStandard)}</color>");
                 if (hasSpecialName)
-                    sb.AppendLine(specialName + $"<color=white>: {data!.StatText.GetEndscreenText(InventorySlot.GearSpecial)}</color>");
-                else
-                    sb.AppendLine(Text.Format(915u, "<color=white>" + successPage.RandAmount() + "</color>"));
+                    sb.AppendLine(specialName + $"<color=white>: {data.StatText.GetEndscreenText(InventorySlot.GearSpecial)}</color>");
                 // HACK - Any invalid InventorySlot uses SlotType.All, and the internal restriction check is only != None.
-                sb.Append($"Total: {data!.StatText.GetEndscreenText(InventorySlot.ResourcePack)}</color>");
+                sb.Append($"Total: {data.StatText.GetEndscreenText(InventorySlot.ResourcePack)}</color>");
             }
             else
             {
@@ -217,6 +206,14 @@ namespace StatDisplay.Patches
             report.m_eval.text = sb.ToString();
             if (isFail)
                 CoroutineManager.BlinkIn(report.gameObject, 3f + index * 0.2f);
+        }
+
+        private static string GetDamageText(StatData? data, DamSlotType slot, bool includePipe = true)
+        {
+            if (data == null) return "";
+            var pipeString = includePipe ? " | " : "";
+            if (!data.HasMod && !StatManager.MasterHasMod) return pipeString + "N/A";
+            return pipeString + $"<#a0a0a0>{(ulong)data.GetDamage(slot, DamStatType.Any)}</color> (<#ffff00>{(ulong)data.GetDamage(slot, DamStatType.Crit)}</color>)";
         }
     }
 }

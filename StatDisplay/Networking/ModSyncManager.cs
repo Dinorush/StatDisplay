@@ -16,15 +16,20 @@ namespace StatDisplay.Networking
 
         internal static void OnAddPlayer(SNet_Player player)
         {
-            if (player.IsLocal || (StatManager.MasterHasMod && player.IsBot))
-                StatManager.AddPlayer(player);
-            else
+            if (player.IsLocal)
+                StatManager.AddPlayer(player, true);
+            else if (!player.IsBot)
+            {
                 _notifySync.Send(true, player, SNet_ChannelType.SessionOrderCritical);
+                StatManager.AddPlayer(player, false);
+            }
+            else
+                StatManager.AddPlayer(player, StatManager.MasterHasMod);
         }
 
         internal static void ReceiveNotify(SNet_Player player)
         {
-            StatManager.AddPlayer(player);
+            StatManager.AddPlayer(player, true);
         }
 
         internal static void OnRemovePlayer(SNet_Player player)
