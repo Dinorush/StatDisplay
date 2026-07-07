@@ -42,7 +42,7 @@ namespace StatDisplay.Config.Vanilla
                 "- Hit: Shots Hit/Shots Fired\n" +
                 "- Crit: Shots Crit/Shots Hit\n" +
                 "- Pierce: All Hits/Shots Hit\n" +
-                "- Damage: All Damage Dealt";
+                "- CritDamage: Crit Damage Dealt";
             _format = _configFile.Bind(section, "Display Format", IConfiguration.DefaultFormat, description);
 
             description = "Show full player names instead of shorthand names.";
