@@ -31,5 +31,6 @@
 		<Reference Include="$(PluginsFolder)/GTFO-API.dll" Private="false" />
 		<Reference Include="$(PluginsFolder)/**/ExtraWeaponCustomization.dll" Private="false" />
 		<Reference Include="$(PluginsFolder)\**\TheArchive.Core.dll" Private="false" />
+		<PackageReference Include="SemanticVersioning" Version="2.0.2" />
 	</ItemGroup>
 </Project>

@@ -44,7 +44,7 @@ namespace StatDisplay.Patches
         [HarmonyPostfix]
         private static void Post_PageEnable(CM_PageExpeditionSuccess __instance)
         {
-            if (!_isReady || SNet.Slots.PlayerSlots == null) return;
+            if (!_isReady || SNet.Slots.PlayerSlots == null || __instance.m_playerReports == null) return;
 
             for (int i = 0; i < SNet.Slots.PlayerSlots.Length; i++)
             {

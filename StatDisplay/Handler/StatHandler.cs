@@ -89,8 +89,8 @@ namespace StatDisplay.Handler
             data.AddRemoteDamDelta(deltaDamage);
         }
 
-        internal static void AddPlayer(SNet_Player player, bool hasMod = true, bool onlyIfExists = false) => Instance.AddPlayer_Internal(player, hasMod, onlyIfExists);
-        private void AddPlayer_Internal(SNet_Player player, bool hasMod = true, bool onlyIfExists = false)
+        internal static void AddPlayer(SNet_Player player, bool hasMod = true) => Instance.AddPlayer_Internal(player, hasMod);
+        private void AddPlayer_Internal(SNet_Player player, bool hasMod = true)
         {
             if (_data.TryGetValue(player.Lookup, out var data))
             {
@@ -98,10 +98,7 @@ namespace StatDisplay.Handler
                 data.HasMod = hasMod;
             }
             else
-            {
-                if (onlyIfExists) return;
                 _data.Add(player.Lookup, new(player, hasMod));
-            }
 
             RefreshMeshList();
         }

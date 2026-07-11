@@ -9,7 +9,14 @@ namespace StatDisplay.Dependencies
 
         static ArchiveWrapper()
         {
-            HasArchive = IL2CPPChainloader.Instance.Plugins.ContainsKey(PLUGIN_GUID);
+            if (IL2CPPChainloader.Instance.Plugins.TryGetValue(PLUGIN_GUID, out var info))
+            {
+                HasArchive = info.Metadata.Version.Major > 0;
+                if (!HasArchive)
+                    DinoLogger.Warning($"{EntryPoint.MODNAME} is only compatible with Auri's Archive release. Using Config file.");
+            }
+            else
+                HasArchive = false;
         }
     }
 }
