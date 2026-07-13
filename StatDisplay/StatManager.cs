@@ -56,7 +56,10 @@ namespace StatDisplay
             }
 
             if (StatHandler.TryGetData(player, out var data))
+            {
                 data.HasMod = hasMod;
+                StatHandler.RefreshMeshList();
+            }
         }
 
         internal static void RemovePlayer(SNet_Player player)
@@ -67,7 +70,7 @@ namespace StatDisplay
         internal static void OnMasterSet()
         {
             MasterHasMod = SNet.IsMaster || _moddedPlayers.Contains(SNet.Master.Lookup);
-            StatHandler.OnMasterSet();
+            StatHandler.RefreshMeshList();
         }
 
         internal static void Clear()

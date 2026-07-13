@@ -129,8 +129,6 @@ namespace StatDisplay.Handler
             }
         }
 
-        internal static void OnMasterSet() => Instance.RefreshMeshList();
-
         internal static void SetVisible(bool visible) => Instance.SetVisible_Internal(visible);
         private void SetVisible_Internal(bool visible)
         {
@@ -144,7 +142,8 @@ namespace StatDisplay.Handler
                     go.SetActive(false);
         }
 
-        private void RefreshMeshList()
+        internal static void RefreshMeshList() => Instance.RefreshMeshList_Internal();
+        private void RefreshMeshList_Internal()
         {
             if (!_visible) return;
 
@@ -155,22 +154,22 @@ namespace StatDisplay.Handler
             var playerSlots = SNet.Slots.PlayerSlots;
             for (int i = 0; i < playerSlots.Count; i++)
             {
-                if (playerSlots[i].player == null) continue;
+                var player = playerSlots[i].player;
+                if (player == null) continue;
 
-                var lookup = playerSlots[i].player.Lookup;
-                if (_data.TryGetValue(lookup, out var data))
+                if (_data.TryGetValue(player.Lookup, out var data))
                 {
                     if (data.HasMod || StatManager.MasterHasMod)
                     {
                         EnsureMeshCapacity(count + 1);
-                        data.StatText.TextMesh = _textMeshList[count];
+                        data.StatText.SetToSlot(_textMeshList[count], player.CharacterIndex);
                         _meshGOList[count].transform.localPosition = GetMeshPos(count);
                         _meshGOList[count].SetActive(true);
                         count++;
                     }
                     else
                     {
-                        data.StatText.TextMesh = null;
+                        data.StatText.SetToEmpty();
                     }
                 }
             }

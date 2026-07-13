@@ -23,8 +23,8 @@ namespace StatDisplay.Data
         private List<Token> _tokens;
         private StringBuilder _builder;
         private readonly StatData _parent;
-        private readonly int _characterSlot;
         private readonly string _characterName;
+        private int _characterSlot;
         private string FormattedSlotName
         {
             get
@@ -49,15 +49,7 @@ namespace StatDisplay.Data
             }
         }
         private TextMeshPro? _textMesh = null;
-        public TextMeshPro? TextMesh
-        {
-            get => _textMesh;
-            set
-            {
-                _textMesh = value;
-                Update(true);
-            }
-        }
+        public TextMeshPro? TextMesh => _textMesh;
 
         private bool _hasMod = false;
         public bool HasMod
@@ -75,12 +67,24 @@ namespace StatDisplay.Data
 
         public StatParser(StatData data, SNet_Player player, bool hasMod)
         {
-            _characterSlot = player.CharacterIndex;
             _characterName = player.NickName;
             _parent = data;
             _hasMod = hasMod;
             SetFormat();
             Configuration.Config.OnChanged += SetFormat;
+        }
+
+        public void SetToSlot(TextMeshPro textMesh, int slot)
+        {
+            _textMesh = textMesh;
+            _characterSlot = slot;
+            Update(true);
+        }
+
+        public void SetToEmpty()
+        {
+            _textMesh = null;
+            Update(true);
         }
 
         public void UpdateMesh()
