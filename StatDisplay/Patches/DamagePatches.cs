@@ -23,6 +23,8 @@ namespace StatDisplay.Patches
                 _cache.slot = slot;
                 _cache.lookup = lookup;
             });
+
+            EWCWrapper.AddProjectilePostHitCallback(ClearCache);
         }
 
         struct CacheInfo

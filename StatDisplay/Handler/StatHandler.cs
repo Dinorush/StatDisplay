@@ -42,6 +42,12 @@ namespace StatDisplay.Handler
             Instance = go.AddComponent<StatHandler>();
         }
 
+        [InvokeOnEnter]
+        private static void RefreshOnEnter()
+        {
+            RefreshMeshList();
+        }
+
         [InvokeOnBuildStart]
         private static void ResetValues()
         {
@@ -100,7 +106,8 @@ namespace StatDisplay.Handler
             else
                 _data.Add(player.Lookup, new(player, hasMod));
 
-            RefreshMeshList();
+            if (player.CharacterIndex != -1)
+                RefreshMeshList();
         }
 
         internal static void RemovePlayer(SNet_Player player) => Instance.RemovePlayer_Internal(player);
@@ -157,7 +164,7 @@ namespace StatDisplay.Handler
                 var player = playerSlots[i].player;
                 if (player == null) continue;
 
-                if (_data.TryGetValue(player.Lookup, out var data))
+                if (_data.TryGetValue(player.Lookup, out var data) && player.CharacterIndex != -1)
                 {
                     if (data.HasMod || StatManager.MasterHasMod)
                     {

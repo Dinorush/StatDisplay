@@ -37,6 +37,12 @@ namespace StatDisplay.Dependencies
                 AddHitCallback_Unsafe(hitCallback);
         }
 
+        public static void AddProjectilePostHitCallback(Action hitCallback)
+        {
+            if (HasEWC)
+                AddPostHitCallback_Unsafe(hitCallback);
+        }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static bool HasCWC_Unsafe(BulletWeapon weapon) => weapon.GetComponent<CustomWeaponComponent>() != null;
 
@@ -97,6 +103,12 @@ namespace StatDisplay.Dependencies
 
                 hitCallback(cwc.Owner.Player.Owner.Lookup, cwc.Weapon.AmmoType.ToDamSlotType());
             };
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void AddPostHitCallback_Unsafe(Action hitCallback)
+        {
+            ProjectileAPI.OnProjectilePostHit += (_, _) => hitCallback();
         }
     }
 }

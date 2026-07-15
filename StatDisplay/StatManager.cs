@@ -58,7 +58,8 @@ namespace StatDisplay
             if (StatHandler.TryGetData(player, out var data))
             {
                 data.HasMod = hasMod;
-                StatHandler.RefreshMeshList();
+                if (player.CharacterIndex != -1)
+                    StatHandler.RefreshMeshList();
             }
         }
 

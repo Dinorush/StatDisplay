@@ -11,7 +11,7 @@ using System.Reflection;
 
 namespace StatDisplay
 {
-    [BepInPlugin("Dinorush." + MODNAME, MODNAME, "1.1.2")]
+    [BepInPlugin("Dinorush." + MODNAME, MODNAME, "1.1.3")]
     [BepInDependency("dev.gtfomodding.gtfo-api", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(EWCWrapper.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(ArchiveWrapper.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
