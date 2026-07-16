@@ -68,6 +68,16 @@ namespace StatDisplay.Data
                     }
                 }
             }
+
+            for (int slot = 0; slot < _damData.GetLength(0); slot++)
+            {
+                for (int stat = 0; stat < _damData.GetLength(1); stat++)
+                {
+                    _damData[slot, stat] = 0;
+                    _deltaDamData[slot, stat] = 0;
+                }
+            }
+
             _needsAccSync = false;
             _needsDamSync = false;
             StatText.Update(true);
