@@ -22,6 +22,7 @@ namespace StatDisplay.Networking
                 _notifySync.Send(true, player, SNet_ChannelType.SessionOrderCritical);
             else
                 StatManager.SetModdedPlayer(player, StatManager.MasterHasMod);
+            StatManager.AddPlayer(player);
         }
 
         internal static void ReceiveNotify(SNet_Player player)

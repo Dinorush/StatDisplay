@@ -46,7 +46,6 @@ namespace StatDisplay
                 if (!player.IsLocal && !player.IsBot)
                     _remotePlayers.TryAdd(player.Lookup, player);
             }
-            // Only bots or players leaving get set to false, so no need to check anything else
             else if (!hasMod)
             {
                 if (!_moddedPlayers.Remove(player.Lookup)) return;
