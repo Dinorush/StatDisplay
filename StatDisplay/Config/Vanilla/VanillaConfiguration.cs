@@ -72,8 +72,8 @@ namespace StatDisplay.Config.Vanilla
 
             description = "Custom display format to use. Use variables by placing them in \"{}\", e.g. {PrimaryShotHit}.\n" +
                 "Percentages can be done by separating two variables with a \'/\', e.g. {FullHit/GroupFired}.\n" +
-                "Variables are composed of slot type, shot type, and stat type. They may occur in any order and are case-insensitive.\n" +
-                "Accepted slots (Unspecified = All):\n" +
+                "Variables are composed of slot types (one or more), shot type, and stat type. They may occur in any order and are case-insensitive.\n" +
+                "Accepted slots (One or more; Unspecified = All):\n" +
                 "- All\n" +
                 "- Primary = Main\n" +
                 "- Secondary = Special\n" +

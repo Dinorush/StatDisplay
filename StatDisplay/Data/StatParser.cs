@@ -159,22 +159,22 @@ namespace StatDisplay.Data
         class Token
         {
             // Exclude Count/All
-            private readonly static string[] s_accSlotTypes = Array.ConvertAll(Enum.GetValues<AccSlotType>()[..(int)AccSlotType.Count], slot => slot.ToString());
-            private readonly static string[] s_accShotTypes = Array.ConvertAll(Enum.GetValues<AccShotType>()[..(int)AccShotType.Count], shot => shot.ToString());
-            private readonly static string[] s_accStatTypes = Array.ConvertAll(Enum.GetValues<AccStatType>()[..(int)AccStatType.Count], stat => stat.ToString());
-            private readonly static string[] s_damSlotTypes = Array.ConvertAll(Enum.GetValues<DamSlotType>()[..(int)DamSlotType.Count], slot => slot.ToString());
-            private readonly static string[] s_damStatTypes = Array.ConvertAll(Enum.GetValues<DamStatType>()[..(int)DamStatType.Count], stat => stat.ToString());
+            private readonly static string[] s_accSlotTypes = Array.ConvertAll(Enum.GetValues<AccSlotType>()[..(int)AccSlotType.Count], slot => slot.ToString().ToLower());
+            private readonly static string[] s_accShotTypes = Array.ConvertAll(Enum.GetValues<AccShotType>()[..(int)AccShotType.Count], shot => shot.ToString().ToLower());
+            private readonly static string[] s_accStatTypes = Array.ConvertAll(Enum.GetValues<AccStatType>()[..(int)AccStatType.Count], stat => stat.ToString().ToLower());
+            private readonly static string[] s_damSlotTypes = Array.ConvertAll(Enum.GetValues<DamSlotType>()[..(int)DamSlotType.Count], slot => slot.ToString().ToLower());
+            private readonly static string[] s_damStatTypes = Array.ConvertAll(Enum.GetValues<DamStatType>()[..(int)DamStatType.Count], stat => stat.ToString().ToLower());
 
             private readonly static Dictionary<string, AccSlotType> s_accSlotExtraMap = new()
             {
-                { "Main", AccSlotType.Primary },
-                { "Special", AccSlotType.Secondary }
+                { "main", AccSlotType.Primary },
+                { "special", AccSlotType.Secondary }
             };
             private readonly static Dictionary<string, DamSlotType> s_damSlotExtraMap = new()
             {
-                { "Main", DamSlotType.Primary },
-                { "Special", DamSlotType.Secondary },
-                { "Class", DamSlotType.Tool }
+                { "main", DamSlotType.Primary },
+                { "special", DamSlotType.Secondary },
+                { "class", DamSlotType.Tool }
             };
 
             private readonly StatData.Retriever _base;
@@ -191,7 +191,7 @@ namespace StatDisplay.Data
                 else
                     _divider = null;
 
-                _base = ParseRetriever(data, text, slot);
+                _base = ParseRetriever(data, text.Trim().ToLower(), slot);
             }
 
             public string GetString()
@@ -208,7 +208,7 @@ namespace StatDisplay.Data
             
             private static StatData.Retriever ParseRetriever(StatData data, string text, InventorySlot slot)
             {
-                return text.Contains("Damage", StringComparison.CurrentCultureIgnoreCase) ? ParseDamageRetriever(data, text, slot) : ParseAccuracyRetriever(data, text, slot);
+                return text.Contains("damage", StringComparison.CurrentCultureIgnoreCase) ? ParseDamageRetriever(data, text, slot) : ParseAccuracyRetriever(data, text, slot);
             }
 
             private static StatData.Retriever ParseDamageRetriever(StatData data, string text, InventorySlot slot)
