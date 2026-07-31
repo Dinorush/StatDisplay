@@ -2,9 +2,9 @@
 {
     public enum DamSlotType : byte
     {
-        Primary, Main = Primary,
-        Secondary, Special = Secondary,
-        Tool, Class = Tool,
+        Primary,
+        Secondary,
+        Tool,
         Melee,
         Count,
         All

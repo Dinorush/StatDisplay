@@ -2,8 +2,8 @@
 {
     public enum AccSlotType : byte
     {
-        Primary, Main = Primary,
-        Secondary, Special = Secondary,
+        Primary,
+        Secondary,
         Count,
         All
     }

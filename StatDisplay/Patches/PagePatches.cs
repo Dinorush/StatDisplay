@@ -141,16 +141,16 @@ namespace StatDisplay.Patches
             if (successPage.TryGetArchetypeName(backpack, InventorySlot.GearStandard, out string mainName))
             {
                 hasMainName = true;
-                sb.AppendLine(mainName + GetDamageText(data, DamSlotType.Main));
+                sb.AppendLine(mainName + GetDamageText(data, DamSlotType.Primary));
             }
             if (successPage.TryGetArchetypeName(backpack, InventorySlot.GearSpecial, out string specialName))
             {
                 hasSpecialName = true;
-                sb.AppendLine(specialName + GetDamageText(data, DamSlotType.Special));
+                sb.AppendLine(specialName + GetDamageText(data, DamSlotType.Secondary));
             }
             if (successPage.TryGetArchetypeName(backpack, InventorySlot.GearClass, out string archName))
             {
-                sb.AppendLine(archName + GetDamageText(data, DamSlotType.Class));
+                sb.AppendLine(archName + GetDamageText(data, DamSlotType.Tool));
             }
             if (successPage.TryGetArchetypeName(backpack, InventorySlot.GearMelee, out archName))
             {

@@ -190,8 +190,8 @@ namespace StatDisplay.Patches
                 {
                     slot = inventory.m_queuedEquipItem.AmmoType switch
                     {
-                        AmmoType.Standard => DamSlotType.Main,
-                        AmmoType.Special => DamSlotType.Special,
+                        AmmoType.Standard => DamSlotType.Primary,
+                        AmmoType.Special => DamSlotType.Secondary,
                         _ => inventory.WieldedSlot.ToDamSlotType(),
                     };
                 }
@@ -199,8 +199,8 @@ namespace StatDisplay.Patches
                     slot = inventory.WieldedSlot.ToDamSlotType();
 
                 // Indeterminate; received bullet damage but source gun is unobtainable. 
-                if (slot != DamSlotType.Main && slot != DamSlotType.Special)
-                    slot = _random.NextSingle() < 0.5f ? DamSlotType.Main : DamSlotType.Special;
+                if (slot != DamSlotType.Primary && slot != DamSlotType.Secondary)
+                    slot = _random.NextSingle() < 0.5f ? DamSlotType.Primary : DamSlotType.Secondary;
             }
 
             CacheDamage(__instance, data.limbID, __state, data.source, slot);

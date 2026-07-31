@@ -1,4 +1,5 @@
 ﻿using SNetwork;
+using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace StatDisplay.Data
@@ -36,7 +37,7 @@ namespace StatDisplay.Data
         {
             long value;
             if (slot == AccSlotType.All)
-                value = _accData[(int)AccSlotType.Main, (int)shot, (int)stat] + _accData[(int)AccSlotType.Special, (int)shot, (int)stat];
+                value = _accData[(int)AccSlotType.Primary, (int)shot, (int)stat] + _accData[(int)AccSlotType.Secondary, (int)shot, (int)stat];
             else
                 value = _accData[(int)slot, (int)shot, (int)stat];
             return value;
@@ -167,32 +168,37 @@ namespace StatDisplay.Data
             StatText.Update(true);
         }
 
-        public static Retriever CreateAccuracyRetriever(StatData data, AccSlotType slotType, AccShotType shotType, AccStatType statType) => new AccuracyRetriever(data, slotType, shotType, statType);
-        public static Retriever CreateDamageRetriever(StatData data, DamSlotType slotType, DamStatType statType) => new DamageRetriever(data, slotType, statType);
+        public static Retriever CreateAccuracyRetriever(StatData data, AccSlotType[] slotTypes, AccShotType shotType, AccStatType statType) => new AccuracyRetriever(data, slotTypes, shotType, statType);
+        public static Retriever CreateDamageRetriever(StatData data, DamSlotType[] slotTypes, DamStatType statType) => new DamageRetriever(data, slotTypes, statType);
 
         class AccuracyRetriever : Retriever
         {
-            private readonly int _slotType;
+            private readonly int[] _slotTypes;
             private readonly int _shotType;
             private readonly int _statType;
-            private readonly bool _isAllSlot;
-            public AccuracyRetriever(StatData data, AccSlotType slotType, AccShotType shotType, AccStatType statType) : base(data)
+
+            public AccuracyRetriever(StatData data, AccSlotType[] slotTypes, AccShotType shotType, AccStatType statType) : base(data)
             {
-                _slotType = (int)slotType;
+                if (slotTypes.Length > 0)
+                {
+                    if (slotTypes[0] == AccSlotType.All)
+                        _slotTypes = new int[2] { (int)AccSlotType.Primary, (int)AccSlotType.Secondary };
+                    else
+                        _slotTypes = Array.ConvertAll(slotTypes, type => (int)type);
+                }
+                else
+                    _slotTypes = Array.Empty<int>();
                 _shotType = (int)shotType;
                 _statType = (int)statType;
-                _isAllSlot = slotType == AccSlotType.All;
             }
 
             public override long Value
             {
                 get
                 {
-                    long value;
-                    if (_isAllSlot)
-                        value = _data._accData[(int)AccSlotType.Main, _shotType, _statType] + _data._accData[(int)AccSlotType.Special, _shotType, _statType];
-                    else
-                        value = _data._accData[_slotType, _shotType, _statType];
+                    long value = 0;
+                    foreach (var slot in _slotTypes)
+                        value += _data._accData[slot, _shotType, _statType];
                     return value;
                 }
             }
@@ -200,27 +206,34 @@ namespace StatDisplay.Data
 
         class DamageRetriever : Retriever
         {
-            private readonly int _slotType;
+            private readonly int[] _slotTypes;
             private readonly int _statType;
-            private readonly bool _isAllSlot;
-            public DamageRetriever(StatData data, DamSlotType slotType, DamStatType statType) : base(data)
+
+            public DamageRetriever(StatData data, DamSlotType[] slotTypes, DamStatType statType) : base(data)
             {
-                _slotType = (int)slotType;
+                if (slotTypes.Length > 0)
+                {
+                    if (slotTypes[0] == DamSlotType.All)
+                    {
+                        _slotTypes = new int[(int)DamSlotType.Count];
+                        for (int i = 0; i < (int)DamSlotType.Count; i++)
+                            _slotTypes[i] = i;
+                    }
+                    else
+                        _slotTypes = Array.ConvertAll(slotTypes, type => (int)type);
+                }
+                else
+                    _slotTypes = Array.Empty<int>();
                 _statType = (int)statType;
-                _isAllSlot = slotType == DamSlotType.All;
             }
+
             public override long Value
             {
                 get
                 {
                     double value = 0;
-                    if (_isAllSlot)
-                    {
-                        for (int i = 0; i < (int)DamSlotType.Count; i++)
-                            value += _data._damData[i, _statType];
-                    }
-                    else
-                        value += _data._damData[_slotType, _statType];
+                    foreach (var slot in _slotTypes)
+                        value += _data._damData[slot, _statType];
                     return (long)value;
                 }
             }

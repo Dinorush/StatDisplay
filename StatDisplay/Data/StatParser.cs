@@ -165,6 +165,18 @@ namespace StatDisplay.Data
             private readonly static string[] s_damSlotTypes = Array.ConvertAll(Enum.GetValues<DamSlotType>()[..(int)DamSlotType.Count], slot => slot.ToString());
             private readonly static string[] s_damStatTypes = Array.ConvertAll(Enum.GetValues<DamStatType>()[..(int)DamStatType.Count], stat => stat.ToString());
 
+            private readonly static Dictionary<string, AccSlotType> s_accSlotExtraMap = new()
+            {
+                { "Main", AccSlotType.Primary },
+                { "Special", AccSlotType.Secondary }
+            };
+            private readonly static Dictionary<string, DamSlotType> s_damSlotExtraMap = new()
+            {
+                { "Main", DamSlotType.Primary },
+                { "Special", DamSlotType.Secondary },
+                { "Class", DamSlotType.Tool }
+            };
+
             private readonly StatData.Retriever _base;
             private readonly StatData.Retriever? _divider;
 
@@ -201,33 +213,34 @@ namespace StatDisplay.Data
 
             private static StatData.Retriever ParseDamageRetriever(StatData data, string text, InventorySlot slot)
             {
-                DamSlotType slotType;
+                DamSlotType[] slotTypes;
                 if (slot != InventorySlot.None)
-                    slotType = slot.ToDamSlotType();
-                else if (!TryGetEnumInText(text, s_damSlotTypes, out slotType))
-                    slotType = DamSlotType.All;
+                    slotTypes = new[] { slot.ToDamSlotType() };
+                else if (!TryGetEnumsInText(text, s_damSlotTypes, s_damSlotExtraMap, out slotTypes))
+                    slotTypes = new[] { DamSlotType.All };
 
                 if (!TryGetEnumInText(text, s_damStatTypes, out DamStatType statType))
                     statType = DamStatType.Any;
 
-                return StatData.CreateDamageRetriever(data, slotType, statType);
+                return StatData.CreateDamageRetriever(data, slotTypes, statType);
             }
 
             private static StatData.Retriever ParseAccuracyRetriever(StatData data, string text, InventorySlot slot)
             {
-                AccSlotType slotType;
+                AccSlotType[] slotTypes;
                 if (slot != InventorySlot.None)
-                    slotType = slot.ToAccSlotType();
-                else if (!TryGetEnumInText(text, s_accSlotTypes, out slotType))
-                    slotType = AccSlotType.All;
+                    slotTypes = new[] { slot.ToAccSlotType() };
+                else if (!TryGetEnumsInText(text, s_accSlotTypes, s_accSlotExtraMap, out slotTypes))
+                    slotTypes = new[] { AccSlotType.All };
 
                 if (!TryGetEnumInText(text, s_accShotTypes, out AccShotType shotType))
                     shotType = AccShotType.Shot;
                 if (!TryGetEnumInText(text, s_accStatTypes, out AccStatType statType))
                     statType = AccStatType.Hit;
 
-                return StatData.CreateAccuracyRetriever(data, slotType, shotType, statType);
+                return StatData.CreateAccuracyRetriever(data, slotTypes, shotType, statType);
             }
+
 
             private static bool TryGetEnumInText<T>(string text, string[] enumStrings, out T value) where T : struct
             {
@@ -254,6 +267,39 @@ namespace StatDisplay.Data
                 }
 
                 value = default;
+                return false;
+            }
+
+            private static bool TryGetEnumsInText<T>(string text, string[] enumStrings, Dictionary<string, T> extraStrings, out T[] value) where T : struct
+            {
+                List<(int index, int length)> enums = new();
+                foreach (var str in enumStrings)
+                {
+                    int index = text.IndexOf(str);
+                    if (index > -1)
+                        enums.Add((index, str.Length));
+                }
+
+                HashSet<T> result = new(enums.Count);
+                foreach ((var str, var enumVal) in extraStrings)
+                    if (text.IndexOf(str) > -1)
+                        result.Add(enumVal);
+
+                foreach ((var index, var length) in enums)
+                {
+                    if (text.Substring(index, length).TryToEnum(out T enumVal))
+                        result.Add(enumVal);
+                    else
+                        DinoLogger.Error($"Unable to parse {typeof(T).Name} in token \"{text}\"");
+                }
+
+                if (result.Count > 0)
+                {
+                    value = result.ToArray();
+                    return true;
+                }
+
+                value = Array.Empty<T>();
                 return false;
             }
         }
