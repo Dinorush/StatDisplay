@@ -185,7 +185,7 @@ namespace StatDisplay.Data
                 int divIndex = text.IndexOf('/');
                 if (divIndex != -1)
                 {
-                    _divider = ParseRetriever(data, text[(divIndex + 1)..], slot);
+                    _divider = ParseRetriever(data, text[(divIndex + 1)..].Trim().ToLower(), slot);
                     text = text[..divIndex];
                 }
                 else
