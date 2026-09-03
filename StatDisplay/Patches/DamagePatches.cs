@@ -2,7 +2,6 @@
 using Gear;
 using HarmonyLib;
 using Player;
-using SNetwork;
 using StatDisplay.Attributes;
 using StatDisplay.Data;
 using StatDisplay.Dependencies;
@@ -132,6 +131,7 @@ namespace StatDisplay.Patches
 
         [HarmonyPatch(typeof(Dam_EnemyDamageBase), nameof(Dam_EnemyDamageBase.BulletDamage))]
         [HarmonyWrapSafe]
+        [HarmonyPriority(Priority.High)]
         [HarmonyPrefix]
         private static void Pre_BulletDamage(Dam_EnemyDamageBase __instance, int limbID, float dam, ref uint gearCategoryId)
         {
