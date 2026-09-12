@@ -8,6 +8,7 @@ using Gear;
 using Player;
 using StatDisplay.Data;
 using StatDisplay.Handler;
+using StatDisplay.Networking;
 using StatDisplay.Utils.Extensions;
 using System;
 using System.Runtime.CompilerServices;
@@ -41,6 +42,18 @@ namespace StatDisplay.Dependencies
         {
             if (HasEWC)
                 AddPostHitCallback_Unsafe(hitCallback);
+        }
+
+        public static void AddPreShotFiredCallback(Action<ulong, DamSlotType> fireCallback)
+        {
+            if (HasEWC)
+                AddPreShotCallback_Unsafe(fireCallback);
+        }
+
+        public static void AddPostShotFiredCallback(Action fireCallback)
+        {
+            if (HasEWC)
+                AddPostShotCallback_Unsafe(fireCallback);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -79,7 +92,7 @@ namespace StatDisplay.Dependencies
 
         private static void RecordDamageLocal(float damage, EnemyAgent enemy, Dam_EnemyDamageLimb limb, PlayerAgent? source, pCWC cwc)
         {
-            if (StatManager.MasterHasMod) return;
+            if (NetworkManager.MasterHasMod) return;
 
             DamStatType stat = limb.m_type == eLimbDamageType.Weakspot ? DamStatType.Crit : DamStatType.Any;
             StatHandler.AddDamage(source!.Owner.Lookup, cwc.slot.ToDamSlotType(), stat, Math.Min(damage, limb.m_base.Health));
@@ -109,6 +122,28 @@ namespace StatDisplay.Dependencies
         private static void AddPostHitCallback_Unsafe(Action hitCallback)
         {
             ProjectileAPI.OnProjectilePostHit += (_, _) => hitCallback();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void AddPreShotCallback_Unsafe(Action<ulong, DamSlotType> fireCallback)
+        {
+            FireShotAPI.PreShotFired += (data, _, _) =>
+            {
+                if (data.owner == null) return;
+
+                fireCallback(data.owner.Owner.Lookup, data.shotInfo.CWC!.Weapon.Component.AmmoType.ToDamSlotType());
+            };
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void AddPostShotCallback_Unsafe(Action fireCallback)
+        {
+            FireShotAPI.OnShotFired += (_, _, _, weaponType) =>
+            {
+                if (!weaponType.HasFlag(EWC.CustomWeapon.Enums.WeaponType.BulletWeapon)) return;
+
+                fireCallback();
+            };
         }
     }
 }

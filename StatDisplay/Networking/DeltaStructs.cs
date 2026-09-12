@@ -1,41 +1,19 @@
 ﻿using StatDisplay.Data;
 using System.Runtime.InteropServices;
 
-namespace StatDisplay.Networking.Events
+namespace StatDisplay.Networking
 {
-    internal sealed class AccDeltaSync : SyncedEvent<pAccDeltaData>
-    {
-        public override string GUID => "ACCSYN";
-
-        protected override void Receive(ulong lookup, pAccDeltaData packet)
-        {
-            StatSyncManager.ReceiveData(packet);
-        }
-    }
-
-    internal sealed class DamDeltaSync : SyncedEvent<pDamDeltaData>
-    {
-        public override string GUID => "DAMSYN";
-
-        protected override void Receive(ulong lookup, pDamDeltaData packet)
-        {
-            StatSyncManager.ReceiveData(packet);
-        }
-    }
-
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct pAccDeltaData
     {
         private const int Count = (int)AccSlotType.Count * (int)AccShotType.Count * (int)AccStatType.Count;
 
-        public ulong Lookup;
         private fixed short _deltaData[Count];
 
-        public static pAccDeltaData Create(ulong lookup, short[,,] deltaData)
+        public static pAccDeltaData Create(short[,,] deltaData)
         {
             pAccDeltaData packet = new()
             {
-                Lookup = lookup,
                 DeltaData = deltaData
             };
             return packet;
@@ -69,14 +47,12 @@ namespace StatDisplay.Networking.Events
     {
         private const int Count = (int)DamSlotType.Count * (int)DamStatType.Count;
 
-        public ulong Lookup;
         private fixed float _deltaData[Count];
 
-        public static pDamDeltaData Create(ulong lookup, float[,] deltaData)
+        public static pDamDeltaData Create(float[,] deltaData)
         {
             pDamDeltaData packet = new()
             {
-                Lookup = lookup,
                 DeltaData = deltaData,
             };
             return packet;

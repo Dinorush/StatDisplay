@@ -22,6 +22,7 @@ namespace StatDisplay.Data
         
         public bool HasMod { get => StatText.HasMod; set => StatText.HasMod = value; }
         public readonly StatParser StatText;
+        public readonly SNet_Player Owner;
 
         public StatData(SNet_Player player, bool hasMod)
         {
@@ -31,6 +32,7 @@ namespace StatDisplay.Data
             _deltaDamData = new float[(int)DamSlotType.Count, (int)DamStatType.Count];
 
             StatText = new StatParser(this, player, hasMod);
+            Owner = player;
         }
 
         public long GetAccuracy(AccSlotType slot, AccShotType shot, AccStatType stat)

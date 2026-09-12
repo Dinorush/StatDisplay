@@ -6,6 +6,7 @@ using SNetwork;
 using StatDisplay.Attributes;
 using StatDisplay.Data;
 using StatDisplay.Handler;
+using StatDisplay.Networking;
 using System;
 using System.Text;
 using UnityEngine;
@@ -212,7 +213,7 @@ namespace StatDisplay.Patches
         {
             if (data == null) return "";
             var pipeString = includePipe ? " | " : "";
-            if (!data.HasMod && !StatManager.MasterHasMod) return pipeString + "N/A";
+            if (!data.HasMod && !NetworkManager.MasterHasMod) return pipeString + "N/A";
             return pipeString + $"<#a0a0a0>{(ulong)data.GetDamage(slot, DamStatType.Any)}</color> (<#ffff00>{(ulong)data.GetDamage(slot, DamStatType.Crit)}</color>)";
         }
     }

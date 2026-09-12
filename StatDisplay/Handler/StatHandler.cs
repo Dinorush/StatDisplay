@@ -11,6 +11,7 @@ using TMPro;
 using UnityEngine;
 using Il2CppInterop.Runtime.Attributes;
 using StatDisplay.Config;
+using System.Linq;
 
 namespace StatDisplay.Handler
 {
@@ -60,6 +61,14 @@ namespace StatDisplay.Handler
             Instance = this;
             EnsureMeshCapacity(4);
             Configuration.Config.OnChanged += ResetMeshOffsets;
+            var modInfo = NetworkManager.ModInfo;
+            modInfo.OnPlayerJoined += OnPlayerJoined;
+            modInfo.OnPlayerModSet += OnPlayerModSet;
+            modInfo.OnMasterModSet += (_) => RefreshMeshList_Internal();
+            modInfo.OnPlayerSpawned += OnPlayerSpawned;
+            modInfo.OnPlayerDespawned += (_) => RefreshMeshList_Internal();
+            modInfo.OnPlayerLeft += OnPlayerLeft;
+            modInfo.OnLobbyLeft += OnLobbyLeft;
         }
 
         [HideFromIl2Cpp]
@@ -95,8 +104,9 @@ namespace StatDisplay.Handler
             data.AddRemoteDamDelta(deltaDamage);
         }
 
-        internal static void AddPlayer(SNet_Player player, bool hasMod = true) => Instance.AddPlayer_Internal(player, hasMod);
-        private void AddPlayer_Internal(SNet_Player player, bool hasMod = true)
+        private void OnPlayerJoined(SNet_Player player) => OnPlayerModSet(player, false);
+
+        private void OnPlayerModSet(SNet_Player player, bool hasMod)
         {
             if (_data.TryGetValue(player.Lookup, out var data))
             {
@@ -107,20 +117,24 @@ namespace StatDisplay.Handler
                 _data.Add(player.Lookup, new(player, hasMod));
 
             if (player.CharacterIndex != -1)
-                RefreshMeshList();
+                RefreshMeshList_Internal();
         }
 
-        internal static void RemovePlayer(SNet_Player player) => Instance.RemovePlayer_Internal(player);
-        private void RemovePlayer_Internal(SNet_Player player)
+        private void OnPlayerLeft(SNet_Player player)
         {
             if (!_data.Remove(player.Lookup, out var data)) return;
 
-            if (data.HasMod || StatManager.MasterHasMod)
-                RefreshMeshList();
+            if (data.HasMod || NetworkManager.MasterHasMod)
+                RefreshMeshList_Internal();
         }
 
-        internal static void Clear() => Instance.Clear_Internal();
-        private void Clear_Internal()
+        private void OnPlayerSpawned(PlayerAgent player)
+        {
+            if (player.Sync.Replicator.OwningPlayer.CharacterIndex != -1)
+                RefreshMeshList_Internal();
+        }
+
+        private void OnLobbyLeft()
         {
             _data.Clear();
             for (int i = 0; i < 4; i++)
@@ -143,7 +157,7 @@ namespace StatDisplay.Handler
             _visible = visible;
 
             if (visible)
-                RefreshMeshList();
+                RefreshMeshList_Internal();
             else
                 foreach (var go in _meshGOList)
                     go.SetActive(false);
@@ -166,7 +180,7 @@ namespace StatDisplay.Handler
 
                 if (_data.TryGetValue(player.Lookup, out var data) && player.CharacterIndex != -1)
                 {
-                    if (data.HasMod || StatManager.MasterHasMod)
+                    if (data.HasMod || NetworkManager.MasterHasMod)
                     {
                         EnsureMeshCapacity(count + 1);
                         data.StatText.SetToSlot(_textMeshList[count], player.CharacterIndex);
@@ -187,10 +201,10 @@ namespace StatDisplay.Handler
         {
             _nextSyncTime = Clock.Time + SyncInterval;
 
-            foreach ((var lookup, var data) in _data)
+            foreach (var data in _data.Values)
             {
-                StatSyncManager.BroadcastAccData(lookup, data);
-                StatSyncManager.BroadcastDamData(lookup, data);
+                StatSyncManager.BroadcastAccData(data);
+                StatSyncManager.BroadcastDamData(data);
             }
         }
 
@@ -267,7 +281,7 @@ namespace StatDisplay.Handler
         private void ResetMeshOffsets()
         {
             for (int i = 0; i < _textMeshList.Count; i++)
-                _meshGOList[i].transform.localPosition = new Vector3(BaseOffset.x + Configuration.Config.Offset.X, BaseOffset.y + Configuration.Config.Offset.Y - i * TextMargin, 0f);
+                _meshGOList[i].transform.localPosition = GetMeshPos(i);
         }
     }
 }

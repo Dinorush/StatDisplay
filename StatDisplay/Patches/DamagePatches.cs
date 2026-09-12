@@ -6,6 +6,7 @@ using StatDisplay.Attributes;
 using StatDisplay.Data;
 using StatDisplay.Dependencies;
 using StatDisplay.Handler;
+using StatDisplay.Networking;
 using StatDisplay.Utils.Extensions;
 using System;
 
@@ -17,18 +18,16 @@ namespace StatDisplay.Patches
         [InvokeOnLoad]
         private static void Init()
         {
-            EWCWrapper.AddProjectileHitCallback((lookup, slot) =>
-            {
-                _cache.slot = slot;
-                _cache.lookup = lookup;
-            });
-
-            EWCWrapper.AddProjectilePostHitCallback(ClearCache);
+            EWCWrapper.AddProjectileHitCallback(AssignCacheIfDone);
+            EWCWrapper.AddProjectilePostHitCallback(ClearCacheIfDone);
+            EWCWrapper.AddPreShotFiredCallback(AssignCacheIfDone);
+            EWCWrapper.AddPostShotFiredCallback(ClearCacheIfDone);
         }
 
         struct CacheInfo
         {
             public DamSlotType slot;
+            public bool inFireFunc;
             public ulong lookup;
 
             public readonly bool Valid => slot != DamSlotType.All && lookup != 0;
@@ -36,6 +35,7 @@ namespace StatDisplay.Patches
             public CacheInfo()
             {
                 slot = DamSlotType.All;
+                inFireFunc = false;
                 lookup = 0;
             }
         }
@@ -43,9 +43,26 @@ namespace StatDisplay.Patches
         private static CacheInfo _cache = new();
         private static readonly Random _random = new();
 
+        private static void AssignCacheIfDone(ulong lookup, DamSlotType slot)
+        {
+            if (_cache.inFireFunc) return;
+
+            _cache.slot = slot;
+            _cache.lookup = lookup;
+        }
+
+        private static void ClearCacheIfDone()
+        {
+            if (_cache.inFireFunc) return;
+
+            _cache.slot = DamSlotType.All;
+            _cache.lookup = 0;
+        }
+
         private static void ClearCache()
         {
             _cache.slot = DamSlotType.All;
+            _cache.inFireFunc = false;
             _cache.lookup = 0;
         }
 
@@ -53,6 +70,7 @@ namespace StatDisplay.Patches
         [HarmonyPatch(typeof(BulletWeaponSynced), nameof(BulletWeaponSynced.Fire))]
         [HarmonyPatch(typeof(Shotgun), nameof(Shotgun.Fire))]
         [HarmonyPatch(typeof(BulletWeapon), nameof(BulletWeapon.Fire))]
+        [HarmonyPriority(Priority.High)]
         [HarmonyWrapSafe]
         [HarmonyPrefix]
         private static void Pre_Fire(BulletWeapon __instance)
@@ -66,6 +84,7 @@ namespace StatDisplay.Patches
         [HarmonyPatch(typeof(Shotgun), nameof(Shotgun.Fire))]
         [HarmonyPatch(typeof(BulletWeapon), nameof(BulletWeapon.Fire))]
         [HarmonyWrapSafe]
+        [HarmonyPriority(Priority.Low)]
         [HarmonyPostfix]
         private static void Post_Fire()
         {
@@ -138,7 +157,7 @@ namespace StatDisplay.Patches
             if (!_cache.Valid || limbID == -1) return;
 
             gearCategoryId = (uint)_cache.slot + 1;
-            if (!StatManager.MasterHasMod)
+            if (!NetworkManager.MasterHasMod)
             {
                 DamStatType stat = __instance.DamageLimbs[limbID].m_type == eLimbDamageType.Weakspot ? DamStatType.Crit : DamStatType.Any;
                 StatHandler.AddDamage(_cache.lookup, _cache.slot, stat, Math.Min(dam, __instance.Health));
@@ -150,7 +169,7 @@ namespace StatDisplay.Patches
         [HarmonyPrefix]
         private static void Pre_MeleeDamage(Dam_EnemyDamageLimb __instance, Agent sourceAgent, float dam)
         {
-            if (!StatManager.MasterHasMod)
+            if (!NetworkManager.MasterHasMod)
             {
                 DamStatType stat = __instance.m_type == eLimbDamageType.Weakspot ? DamStatType.Crit : DamStatType.Any;
                 StatHandler.AddDamage(sourceAgent.Cast<PlayerAgent>().Owner.Lookup, DamSlotType.Melee, stat, Math.Min(dam, __instance.m_base.Health));

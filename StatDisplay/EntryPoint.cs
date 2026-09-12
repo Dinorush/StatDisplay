@@ -11,8 +11,9 @@ using System.Reflection;
 
 namespace StatDisplay
 {
-    [BepInPlugin("Dinorush." + MODNAME, MODNAME, "1.1.8")]
+    [BepInPlugin("Dinorush." + MODNAME, MODNAME, "1.2.0")]
     [BepInDependency("dev.gtfomodding.gtfo-api", BepInDependency.DependencyFlags.HardDependency)]
+    [BepInDependency("Dinorush.OptionalNetworkAPI", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(EWCWrapper.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(ArchiveWrapper.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
     internal sealed class EntryPoint : BasePlugin
