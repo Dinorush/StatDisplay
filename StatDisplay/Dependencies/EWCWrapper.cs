@@ -3,6 +3,8 @@ using Enemies;
 using EWC.API;
 using EWC.API.Accuracy;
 using EWC.CustomWeapon;
+using EWC.CustomWeapon.Enums;
+using EWC.CustomWeapon.Properties.Traits;
 using EWC.CustomWeapon.Structs;
 using Gear;
 using Player;
@@ -56,6 +58,11 @@ namespace StatDisplay.Dependencies
                 AddPostShotCallback_Unsafe(fireCallback);
         }
 
+        public static bool TrySetAccuracyWeight(StatData data, Item item, AccSlotType slot)
+        {
+            return HasEWC && TrySetAccuracyWeight_Unsafe(data, item, slot);
+        }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static bool HasCWC_Unsafe(BulletWeapon weapon) => weapon.GetComponent<CustomWeaponComponent>() != null;
 
@@ -88,6 +95,17 @@ namespace StatDisplay.Dependencies
             DamageAPI.PostDOTDamage += RecordPostDamageHost;
             DamageAPI.PostExplosiveDamage += RecordPostDamageHost;
             DamageAPI.PostShrapnelDamage += RecordPostDamageHost;
+
+            GearAPI.OnGearSpawned += (item, cwc) =>
+            {
+                if (!StatHandler.TryGetData(item.Owner.Owner, out var data)) return;
+
+                var slot = item.AmmoType.ToAccSlotType();
+                if (cwc == null)
+                    data.SetAccuracyWeights(item, slot);
+                else
+                    SetAccuracyWeight_Unsafe(data, item, cwc, slot);
+            };
         }
 
         private static void RecordDamageLocal(float damage, EnemyAgent enemy, Dam_EnemyDamageLimb limb, PlayerAgent? source, pCWC cwc)
@@ -140,10 +158,45 @@ namespace StatDisplay.Dependencies
         {
             FireShotAPI.OnShotFired += (_, _, _, weaponType) =>
             {
-                if (!weaponType.HasFlag(EWC.CustomWeapon.Enums.WeaponType.BulletWeapon)) return;
+                if (!weaponType.HasFlag(WeaponType.BulletWeapon)) return;
 
                 fireCallback();
             };
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static bool TrySetAccuracyWeight_Unsafe(StatData data, Item item, AccSlotType slot)
+        {
+            var cwc = item.GetComponent<CustomWeaponComponent>();
+            if (cwc == null) return false;
+
+            SetAccuracyWeight_Unsafe(data, item, cwc, slot);
+            return true;
+        }
+
+        private static void SetAccuracyWeight_Unsafe(StatData data, Item item, CustomWeaponComponent cwc, AccSlotType slot)
+        {
+            if (!cwc.Owner.IsType(OwnerType.Player) || !cwc.Weapon.IsType(WeaponType.BulletWeapon)) return;
+
+            var arch = cwc.Weapon.ArchetypeData;
+            int pelletCount = cwc.Weapon.IsShotgun ? arch.ShotgunBulletCount : 1;
+            if (cwc.TryGetTrait<MultiShot>(out var multiShot))
+            {
+                var shots = multiShot.Offsets.Length / 2 * ((int)multiShot.Repeat + 1);
+                if (!multiShot.ForceSingleBullet)
+                    shots *= pelletCount;
+
+                if (multiShot.CancelShot)
+                    pelletCount = shots;
+                else
+                    pelletCount += shots;
+            }
+
+            float ammo = arch.CostOfBullet;
+            if (cwc.TryGetTrait<AmmoCap>(out var ammoCap))
+                ammo /= ammoCap.AmmoCapRel;
+
+            data.SetAccuracyWeights(slot, 1f / pelletCount, ammo);
         }
     }
 }

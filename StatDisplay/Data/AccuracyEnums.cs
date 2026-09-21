@@ -1,4 +1,6 @@
-﻿namespace StatDisplay.Data
+﻿using System;
+
+namespace StatDisplay.Data
 {
     public enum AccSlotType : byte
     {
@@ -6,6 +8,15 @@
         Secondary,
         Count,
         All
+    }
+
+    [Flags]
+    public enum AccWeightType : byte
+    {
+        None = 0,
+        Pellet = 1,
+        Ammo = 1 << 1,
+        All = Pellet | Ammo
     }
 
     public enum AccShotType : byte

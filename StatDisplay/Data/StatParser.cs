@@ -1,5 +1,7 @@
-﻿using StatDisplay.Utils.Extensions;
-using Player;
+﻿using Player;
+using SNetwork;
+using StatDisplay.Config;
+using StatDisplay.Utils.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -7,8 +9,6 @@ using System.Linq;
 using System.Text;
 using TMPro;
 using UnityEngine;
-using SNetwork;
-using StatDisplay.Config;
 
 namespace StatDisplay.Data
 {
@@ -162,6 +162,7 @@ namespace StatDisplay.Data
             private readonly static string[] s_accSlotTypes = Array.ConvertAll(Enum.GetValues<AccSlotType>()[..(int)AccSlotType.Count], slot => slot.ToString().ToLower());
             private readonly static string[] s_accShotTypes = Array.ConvertAll(Enum.GetValues<AccShotType>()[..(int)AccShotType.Count], shot => shot.ToString().ToLower());
             private readonly static string[] s_accStatTypes = Array.ConvertAll(Enum.GetValues<AccStatType>()[..(int)AccStatType.Count], stat => stat.ToString().ToLower());
+            private readonly static string[] s_accWeightTypes = Array.ConvertAll(Enum.GetValues<AccWeightType>()[1..], stat => stat.ToString().ToLower());
             private readonly static string[] s_damSlotTypes = Array.ConvertAll(Enum.GetValues<DamSlotType>()[..(int)DamSlotType.Count], slot => slot.ToString().ToLower());
             private readonly static string[] s_damStatTypes = Array.ConvertAll(Enum.GetValues<DamStatType>()[..(int)DamStatType.Count], stat => stat.ToString().ToLower());
 
@@ -192,6 +193,7 @@ namespace StatDisplay.Data
                     _divider = null;
 
                 _base = ParseRetriever(data, text.Trim().ToLower(), slot);
+                _base.AlignWith(_divider);
             }
 
             public string GetString()
@@ -201,9 +203,9 @@ namespace StatDisplay.Data
                 {
                     var divValue = _divider.Value;
                     if (divValue == 0) return baseValue > 0 ? "100%" : "-";
-                    return ((double)baseValue / divValue).ToString("P0");
+                    return (baseValue / divValue).ToString("P0");
                 }
-                return baseValue.ToString();
+                return ((long)baseValue).ToString();
             }
             
             private static StatData.Retriever ParseRetriever(StatData data, string text, InventorySlot slot)
@@ -227,6 +229,8 @@ namespace StatDisplay.Data
 
             private static StatData.Retriever ParseAccuracyRetriever(StatData data, string text, InventorySlot slot)
             {
+                RemoveWeightFromText(ref text, out AccWeightType weightType);
+
                 AccSlotType[] slotTypes;
                 if (slot != InventorySlot.None)
                     slotTypes = new[] { slot.ToAccSlotType() };
@@ -238,9 +242,8 @@ namespace StatDisplay.Data
                 if (!TryGetEnumInText(text, s_accStatTypes, out AccStatType statType))
                     statType = AccStatType.Hit;
 
-                return StatData.CreateAccuracyRetriever(data, slotTypes, shotType, statType);
+                return StatData.CreateAccuracyRetriever(data, slotTypes, shotType, statType, weightType);
             }
-
 
             private static bool TryGetEnumInText<T>(string text, string[] enumStrings, out T value) where T : struct
             {
@@ -257,17 +260,40 @@ namespace StatDisplay.Data
 
                 if (index != -1)
                 {
-                    if (text.Substring(index, length).TryToEnum(out value))
+                    var enumText = text.Substring(index, length);
+                    if (enumText.TryToEnum(out value))
                         return true;
                     else
                     {
-                        DinoLogger.Error($"Unable to parse {typeof(T).Name} in token \"{text}\"");
+                        DinoLogger.Error($"Unable to parse {typeof(T).Name} from {enumText} in token \"{text}\"");
                         return false;
                     }
                 }
 
                 value = default;
                 return false;
+            }
+
+            private static void RemoveWeightFromText(ref string text, out AccWeightType value)
+            {
+                int start = text.IndexOf('(');
+                if (start == -1)
+                {
+                    value = AccWeightType.None;
+                    return;
+                }
+
+                int end = text.LastIndexOf(')');
+                if (end == -1)
+                {
+                    value = AccWeightType.None;
+                    return;
+                }
+
+                var searchStr = text[(start + 1)..end];
+                text = text.Remove(start, end - start + 1);
+                if (!TryGetEnumInText(searchStr, s_accWeightTypes, out value))
+                    value = AccWeightType.None;
             }
 
             private static bool TryGetEnumsInText<T>(string text, string[] enumStrings, Dictionary<string, T> extraStrings, out T[] value) where T : struct
@@ -287,10 +313,11 @@ namespace StatDisplay.Data
 
                 foreach ((var index, var length) in enums)
                 {
-                    if (text.Substring(index, length).TryToEnum(out T enumVal))
+                    var enumText = text.Substring(index, length);
+                    if (enumText.TryToEnum(out T enumVal))
                         result.Add(enumVal);
                     else
-                        DinoLogger.Error($"Unable to parse {typeof(T).Name} in token \"{text}\"");
+                        DinoLogger.Error($"Unable to parse {typeof(T).Name} from {enumText} in token \"{text}\"");
                 }
 
                 if (result.Count > 0)

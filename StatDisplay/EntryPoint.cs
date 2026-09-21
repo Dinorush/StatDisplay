@@ -8,10 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using StatDisplay.Patches;
 
 namespace StatDisplay
 {
-    [BepInPlugin("Dinorush." + MODNAME, MODNAME, "1.2.0")]
+    [BepInPlugin("Dinorush." + MODNAME, MODNAME, "1.3.0")]
     [BepInDependency("dev.gtfomodding.gtfo-api", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("Dinorush.OptionalNetworkAPI", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(EWCWrapper.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
@@ -33,6 +34,8 @@ namespace StatDisplay
             foreach (var type in _allTypes)
                 if (type.GetCustomAttribute<HarmonyPatch>() != null)
                     harmony.PatchAll(type);
+
+            GearCreationPatches.Init(harmony);
 
             CacheFrequentCallbacks();
             InvokeCallbacks<InvokeOnLoadAttribute>();

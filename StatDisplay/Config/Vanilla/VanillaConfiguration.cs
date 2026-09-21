@@ -42,6 +42,8 @@ namespace StatDisplay.Config.Vanilla
                 "- Hit: Shots Hit/Shots Fired\n" +
                 "- Crit: Shots Crit/Shots Hit\n" +
                 "- Pierce: All Hits/Shots Hit\n" +
+                "- Weight: Scales accuracy stats per-weapon by ammo capacity/pellets\n" +
+                "- Damage: All Damage Dealt\n" +
                 "- CritDamage: Crit Damage Dealt";
             _format = _configFile.Bind(section, "Display Format", IConfiguration.DefaultFormat, description);
 
@@ -73,6 +75,7 @@ namespace StatDisplay.Config.Vanilla
             description = "Custom display format to use. Use variables by placing them in \"{}\", e.g. {PrimaryShotHit}.\n" +
                 "Percentages can be done by separating two variables with a \'/\', e.g. {FullHit/GroupFired}.\n" +
                 "Variables are composed of slot types (one or more), shot type, and stat type. They may occur in any order and are case-insensitive.\n" +
+                "Accuracy also includes Weight type, specified in parentheses as (Weight Type). Percentages apply Weight to both variables.\n" +
                 "Accepted slots (One or more; Unspecified = All):\n" +
                 "- All\n" +
                 "- Primary = Main\n" +
@@ -89,7 +92,11 @@ namespace StatDisplay.Config.Vanilla
                 "- Fired: Number of times fired.\n" +
                 "Accepted damage stat types (Unspecified = Any):\n" +
                 "- Any: Damage from any hit.\n" +
-                "- Crit: Damage from weakspot hits.";
+                "- Crit: Damage from weakspot hits.\n" +
+                "Accepted accuracy weight types (Unspecified = None):\n" +
+                "- Pellet: Inversely scales each weapon's accuracy by pellet count.\n" +
+                "- Ammo: Inversely scales each weapon's accuracy by ammo capacity.\n" +
+                "- All: Includes both Pellet and Ammo.";
             _customFormat = _configFile.Bind(section, "Custom Format", IConfiguration.BuildPresetFormat(IConfiguration.DefaultFormat), description);
 
             description = "Whether to use the custom format for the mission end screen instead of the preset format.";
@@ -100,15 +107,13 @@ namespace StatDisplay.Config.Vanilla
 
             CacheValues();
 
-            LiveEditListener listener = LiveEdit.CreateListener(Paths.ConfigPath, EntryPoint.MODNAME + ".cfg", false);
-            listener.FileChanged += OnFileChanged;
+            SafeFileSystemWatcher.Create(_configFile);
+            _configFile.ConfigReloaded += OnConfigReloaded;
         }
 
-        private void OnFileChanged(LiveEditEventArgs _)
+        private void OnConfigReloaded(object? obj, EventArgs e)
         {
-            _configFile.Reload();
             CacheValues();
-
             OnChanged?.Invoke();
         }
 

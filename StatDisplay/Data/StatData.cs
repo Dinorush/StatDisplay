@@ -1,4 +1,7 @@
-﻿using SNetwork;
+﻿using Gear;
+using Player;
+using SNetwork;
+using StatDisplay.Dependencies;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
@@ -10,7 +13,20 @@ namespace StatDisplay.Data
         {
             protected readonly StatData _data;
             public Retriever(StatData data) => _data = data;
-            public abstract long Value { get; }
+            public abstract double Value { get; }
+            public virtual void AlignWith(Retriever? retriever) { }
+        }
+
+        struct SlotWeights
+        {
+            public float Pellet;
+            public float Ammo;
+
+            public SlotWeights()
+            {
+                Pellet = 1f;
+                Ammo = 1f;
+            }
         }
 
         private readonly long[,,] _accData;
@@ -19,7 +35,10 @@ namespace StatDisplay.Data
         private readonly float[,] _deltaDamData;
         private bool _needsAccSync = false;
         private bool _needsDamSync = false;
-        
+
+        private SlotWeights _primaryWeights = new();
+        private SlotWeights _secondaryWeights = new();
+
         public bool HasMod { get => StatText.HasMod; set => StatText.HasMod = value; }
         public readonly StatParser StatText;
         public readonly SNet_Player Owner;
@@ -33,6 +52,7 @@ namespace StatDisplay.Data
 
             StatText = new StatParser(this, player, hasMod);
             Owner = player;
+            InitAccuracyWeights();
         }
 
         public long GetAccuracy(AccSlotType slot, AccShotType shot, AccStatType stat)
@@ -170,7 +190,56 @@ namespace StatDisplay.Data
             StatText.Update(true);
         }
 
-        public static Retriever CreateAccuracyRetriever(StatData data, AccSlotType[] slotTypes, AccShotType shotType, AccStatType statType) => new AccuracyRetriever(data, slotTypes, shotType, statType);
+        internal void SetAccuracyWeights(Item item, AccSlotType slot)
+        {
+            if (EWCWrapper.TrySetAccuracyWeight(this, item, slot))
+                return;
+
+            var weapon = item.TryCast<BulletWeapon>();
+            if (weapon == null) return;
+
+            var archData = weapon.ArchetypeData;
+            if (archData == null) return;
+
+            bool isShotgun = Owner.IsLocal ? weapon.TryCast<Shotgun>() : weapon.TryCast<ShotgunSynced>();
+            float pellet = isShotgun ? 1f / archData.ShotgunBulletCount : 1f;
+            float ammo = archData.CostOfBullet;
+            SetAccuracyWeights(slot, pellet, ammo);
+        }
+
+        internal void SetAccuracyWeights(AccSlotType slot, float pelletWeight, float ammoWeight)
+        {
+            if (slot == AccSlotType.Primary)
+            {
+                _primaryWeights = new()
+                {
+                    Pellet = pelletWeight,
+                    Ammo = ammoWeight
+                };
+            }
+            else if(slot == AccSlotType.Secondary)
+            {
+                _secondaryWeights = new()
+                {
+                    Pellet = pelletWeight,
+                    Ammo = ammoWeight
+                };
+            }
+
+            StatText.Update();
+        }
+
+        private void InitAccuracyWeights()
+        {
+            if (!PlayerBackpackManager.TryGetBackpack(Owner, out var bp)) return;
+
+            if (bp.TryGetBackpackItem(InventorySlot.GearStandard, out var bpItem))
+                SetAccuracyWeights(bpItem.Instance, AccSlotType.Primary);
+            if (bp.TryGetBackpackItem(InventorySlot.GearSpecial, out bpItem))
+                SetAccuracyWeights(bpItem.Instance, AccSlotType.Secondary);
+        }
+
+        public static Retriever CreateAccuracyRetriever(StatData data, AccSlotType[] slotTypes, AccShotType shotType, AccStatType statType, AccWeightType weightType) => new AccuracyRetriever(data, slotTypes, shotType, statType, weightType);
         public static Retriever CreateDamageRetriever(StatData data, DamSlotType[] slotTypes, DamStatType statType) => new DamageRetriever(data, slotTypes, statType);
 
         class AccuracyRetriever : Retriever
@@ -178,8 +247,9 @@ namespace StatDisplay.Data
             private readonly int[] _slotTypes;
             private readonly int _shotType;
             private readonly int _statType;
+            private AccWeightType _weightType;
 
-            public AccuracyRetriever(StatData data, AccSlotType[] slotTypes, AccShotType shotType, AccStatType statType) : base(data)
+            public AccuracyRetriever(StatData data, AccSlotType[] slotTypes, AccShotType shotType, AccStatType statType, AccWeightType weightType) : base(data)
             {
                 if (slotTypes.Length > 0)
                 {
@@ -192,16 +262,67 @@ namespace StatDisplay.Data
                     _slotTypes = Array.Empty<int>();
                 _shotType = (int)shotType;
                 _statType = (int)statType;
+                _weightType = weightType;
             }
 
-            public override long Value
+            public override void AlignWith(Retriever? retriever)
+            {
+                if (retriever == null || retriever is not AccuracyRetriever accRetriever) return;
+
+                if (_weightType != AccWeightType.None)
+                    accRetriever._weightType = _weightType;
+                else
+                    _weightType = accRetriever._weightType;
+            }
+
+            public override double Value
             {
                 get
                 {
-                    long value = 0;
-                    foreach (var slot in _slotTypes)
-                        value += _data._accData[slot, _shotType, _statType];
-                    return value;
+                    if (_weightType != AccWeightType.None && _slotTypes.Length > 1)
+                    {
+                        double primary = _data._accData[(int)AccSlotType.Primary, _shotType, _statType];
+                        double secondary = _data._accData[(int)AccSlotType.Secondary, _shotType, _statType];
+
+                        if (_weightType.HasFlag(AccWeightType.Pellet))
+                        {
+                            primary *= _data._primaryWeights.Pellet;
+                            secondary *= _data._secondaryWeights.Pellet;
+                        }
+
+                        if (_weightType.HasFlag(AccWeightType.Ammo))
+                        {
+                            float primaryWeight = _data._primaryWeights.Ammo;
+                            float secondaryWeight = _data._secondaryWeights.Ammo;
+                            float totalWeight = primaryWeight + secondaryWeight;
+                            if (totalWeight > 0.0001f)
+                            {
+                                primaryWeight *= 2f / totalWeight;
+                                secondaryWeight *= 2f / totalWeight;
+                                primary *= primaryWeight;
+                                secondary *= secondaryWeight;
+                            }
+                        }
+
+                        return primary + secondary;
+                    }
+                    else if (_weightType.HasFlag(AccWeightType.Pellet) && _slotTypes.Length == 1)
+                    {
+                        var slot = _slotTypes[0];
+                        double decValue = _data._accData[slot, _shotType, _statType];
+                        if (slot == 0)
+                            decValue *= _data._primaryWeights.Pellet;
+                        else
+                            decValue *= _data._secondaryWeights.Pellet;
+                        return decValue;
+                    }
+                    else
+                    {
+                        double value = 0;
+                        foreach (var slot in _slotTypes)
+                            value += _data._accData[slot, _shotType, _statType];
+                        return value;
+                    }
                 }
             }
         }
@@ -229,14 +350,14 @@ namespace StatDisplay.Data
                 _statType = (int)statType;
             }
 
-            public override long Value
+            public override double Value
             {
                 get
                 {
                     double value = 0;
                     foreach (var slot in _slotTypes)
                         value += _data._damData[slot, _statType];
-                    return (long)value;
+                    return value;
                 }
             }
         }

@@ -20,8 +20,8 @@ namespace StatDisplay.Config
             "#a0a0a0",
             "#ffff00"
         };
-        public const PresetConfigSetting DefaultFormat = PresetConfigSetting.Hit | PresetConfigSetting.Crit | PresetConfigSetting.Damage;
-        public const PresetConfigSetting DefaultEndScreenFormat = PresetConfigSetting.Hit | PresetConfigSetting.Crit;
+        public const PresetConfigSetting DefaultFormat = PresetConfigSetting.Hit | PresetConfigSetting.Crit | PresetConfigSetting.Damage | PresetConfigSetting.Weight;
+        public const PresetConfigSetting DefaultEndScreenFormat = PresetConfigSetting.Hit | PresetConfigSetting.Crit | PresetConfigSetting.Weight;
         public static string BuildPresetFormat(PresetConfigSetting settings) => BuildPresetFormat(settings, DefaultColors);
         public static string BuildPresetFormat(PresetConfigSetting settings, string[] colors)
         {
@@ -37,12 +37,13 @@ namespace StatDisplay.Config
                 }
             }
 
+            string weightText = settings.HasFlag(PresetConfigSetting.Weight) ? "(All)" : string.Empty;
             if (settings.HasFlag(PresetConfigSetting.Hit))
-                sb.Append($"<{colors[0]}>{{Hit/Fired}}</color>");
+                sb.Append($"<{colors[0]}>{{Hit/Fired{weightText}}}</color>");
             if (settings.HasFlag(PresetConfigSetting.Crit))
-                AppendPrefixNotFirst('/', $"<{colors[1]}>{{Crit/Hit}}</color>");
+                AppendPrefixNotFirst('/', $"<{colors[1]}>{{Crit/Hit{weightText}}}</color>");
             if (settings.HasFlag(PresetConfigSetting.Pierce))
-                AppendPrefixNotFirst('/', $"<{colors[2]}>{{FullHit/Hit}}</color>");
+                AppendPrefixNotFirst('/', $"<{colors[2]}>{{FullHit/Hit{weightText}}}</color>");
             if (settings.HasFlag(PresetConfigSetting.Damage))
             {
                 AppendPrefixNotFirst(' ', $"(<{colors[3]}>{{Damage}}</color>");
@@ -76,6 +77,7 @@ namespace StatDisplay.Config
         Crit = 1 << 1,
         Pierce = 1 << 2,
         Damage = 1 << 3,
-        CritDamage = 1 << 4
+        CritDamage = 1 << 4,
+        Weight = 1 << 5
     }
 }
