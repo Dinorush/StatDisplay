@@ -145,9 +145,9 @@ namespace StatDisplay.Dependencies
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void AddPreShotCallback_Unsafe(Action<ulong, DamSlotType> fireCallback)
         {
-            FireShotAPI.PreShotFired += (data, _, _) =>
+            FireShotAPI.PreShotFired += (data, _, cwc) =>
             {
-                if (data.owner == null) return;
+                if (data.owner == null || !cwc.Weapon.IsType(WeaponType.BulletWeapon) || !cwc.Owner.IsType(OwnerType.Managed)) return;
 
                 fireCallback(data.owner.Owner.Lookup, data.shotInfo.CWC!.Weapon.Component.AmmoType.ToDamSlotType());
             };
@@ -156,9 +156,9 @@ namespace StatDisplay.Dependencies
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void AddPostShotCallback_Unsafe(Action fireCallback)
         {
-            FireShotAPI.OnShotFired += (_, _, _, weaponType) =>
+            FireShotAPI.OnShotFired += (hitData, _, _, cwc) =>
             {
-                if (!weaponType.HasFlag(WeaponType.BulletWeapon)) return;
+                if (!cwc.Weapon.IsType(WeaponType.BulletWeapon) || !cwc.Owner.IsType(OwnerType.Managed)) return;
 
                 fireCallback();
             };
