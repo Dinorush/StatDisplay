@@ -40,6 +40,7 @@ namespace StatDisplay.Patches
             }
         }
 
+        private static int _assignStack = 0;
         private static CacheInfo _cache = new();
         private static readonly Random _random = new();
 
@@ -47,20 +48,33 @@ namespace StatDisplay.Patches
         {
             if (_cache.inFireFunc) return;
 
+            if (slot != _cache.slot || lookup != _cache.lookup)
+                _assignStack = 0;
+
+            _assignStack++;
             _cache.slot = slot;
             _cache.lookup = lookup;
         }
 
         private static void ClearCacheIfDone()
         {
-            if (_cache.inFireFunc) return;
+            if (_cache.inFireFunc || --_assignStack > 0) return;
 
             _cache.slot = DamSlotType.All;
             _cache.lookup = 0;
         }
 
+        private static void AssignCache(ulong lookup, DamSlotType slot)
+        {
+            _assignStack++;
+            _cache.slot = slot;
+            _cache.inFireFunc = true;
+            _cache.lookup = lookup;
+        }
+
         private static void ClearCache()
         {
+            _assignStack = 0; // JFS - Decrement should work, but it should always be zero here
             _cache.slot = DamSlotType.All;
             _cache.inFireFunc = false;
             _cache.lookup = 0;
@@ -75,8 +89,7 @@ namespace StatDisplay.Patches
         [HarmonyPrefix]
         private static void Pre_Fire(BulletWeapon __instance)
         {
-            _cache.slot = __instance.AmmoType.ToDamSlotType();
-            _cache.lookup = __instance.Owner.Owner.Lookup;
+            AssignCache(__instance.Owner.Owner.Lookup, __instance.AmmoType.ToDamSlotType());
         }
 
         [HarmonyPatch(typeof(ShotgunSynced), nameof(Shotgun.Fire))]
@@ -97,8 +110,7 @@ namespace StatDisplay.Patches
         [HarmonyPrefix]
         private static void Pre_Attack(ItemEquippable __instance)
         {
-            _cache.slot = DamSlotType.Melee;
-            _cache.lookup = __instance.Owner.Owner.Lookup;
+            AssignCache(__instance.Owner.Owner.Lookup, DamSlotType.Melee);
         }
 
         [HarmonyPatch(typeof(MeleeWeaponFirstPerson), nameof(MeleeWeaponFirstPerson.DoAttackDamage))]
@@ -144,8 +156,7 @@ namespace StatDisplay.Patches
 
         private static void CacheTool(PlayerAgent? owner)
         {
-            _cache.slot = DamSlotType.Tool;
-            _cache.lookup = owner?.Owner.Lookup ?? 0;
+            AssignCache(owner?.Owner.Lookup ?? 0, DamSlotType.Tool);
         }
 
         [HarmonyPatch(typeof(Dam_EnemyDamageBase), nameof(Dam_EnemyDamageBase.BulletDamage))]
