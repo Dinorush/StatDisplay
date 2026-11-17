@@ -57,8 +57,11 @@ namespace StatDisplay.Data
             get => _hasMod;
             set
             {
-                _hasMod = value;
-                SetFormat();
+                if (_hasMod != value)
+                {
+                    _hasMod = value;
+                    SetFormat();
+                }
             }
         }
 

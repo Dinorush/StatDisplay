@@ -1,17 +1,17 @@
-﻿using StatDisplay.Attributes;
-using StatDisplay.Data;
-using StatDisplay.Networking;
+﻿using Il2CppInterop.Runtime.Attributes;
 using Il2CppInterop.Runtime.Injection;
 using Player;
 using SNetwork;
+using StatDisplay.Attributes;
+using StatDisplay.Config;
+using StatDisplay.Data;
+using StatDisplay.Networking;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using TMPro;
 using UnityEngine;
-using Il2CppInterop.Runtime.Attributes;
-using StatDisplay.Config;
-using System.Linq;
 
 namespace StatDisplay.Handler
 {
@@ -111,10 +111,14 @@ namespace StatDisplay.Handler
             if (_data.TryGetValue(player.Lookup, out var data))
             {
                 if (data.HasMod == hasMod) return;
+                DinoLogger.Log($"Updated {player.NickName} mod status: {data.HasMod} -> {hasMod}");
                 data.HasMod = hasMod;
             }
             else
+            {
+                DinoLogger.Log($"Added {player.NickName} with mod status: {hasMod}");
                 _data.Add(player.Lookup, new(player, hasMod));
+            }
 
             if (player.CharacterIndex != -1)
                 RefreshMeshList_Internal();
@@ -124,6 +128,7 @@ namespace StatDisplay.Handler
         {
             if (!_data.Remove(player.Lookup, out var data)) return;
 
+            DinoLogger.Log($"Removed {player.NickName} with mod status: {data.HasMod}");
             if (data.HasMod || NetworkManager.MasterHasMod)
                 RefreshMeshList_Internal();
         }
@@ -136,6 +141,7 @@ namespace StatDisplay.Handler
 
         private void OnLobbyLeft()
         {
+            DinoLogger.Log($"Left lobby, clearing all info!");
             _data.Clear();
             for (int i = 0; i < 4; i++)
                 _meshGOList[i].SetActive(false);
@@ -163,6 +169,7 @@ namespace StatDisplay.Handler
                     go.SetActive(false);
         }
 
+        private List<StatData> _debugSlotInfo = new();
         internal static void RefreshMeshList() => Instance.RefreshMeshList_Internal();
         private void RefreshMeshList_Internal()
         {
@@ -173,15 +180,17 @@ namespace StatDisplay.Handler
 
             int count = 0;
             var playerSlots = SNet.Slots.PlayerSlots;
-            for (int i = 0; i < playerSlots.Count; i++)
+            List<StatData> debugSlotInfoNew = new(playerSlots.Length);
+            foreach (var slot in playerSlots)
             {
-                var player = playerSlots[i].player;
+                var player = slot.player;
                 if (player == null) continue;
 
                 if (_data.TryGetValue(player.Lookup, out var data) && player.CharacterIndex != -1)
                 {
                     if (data.HasMod || NetworkManager.MasterHasMod)
                     {
+                        debugSlotInfoNew.Add(data);
                         EnsureMeshCapacity(count + 1);
                         data.StatText.SetToSlot(_textMeshList[count], player.CharacterIndex);
                         _meshGOList[count].transform.localPosition = GetMeshPos(count);
@@ -194,7 +203,15 @@ namespace StatDisplay.Handler
                     }
                 }
             }
+
+            if (!_debugSlotInfo.SequenceEqual(debugSlotInfoNew))
+            {
+                DinoLogger.Log($"Changed stat list: [{Debug_ListToString(_debugSlotInfo)}] -> [{Debug_ListToString(debugSlotInfoNew)}] (Master {SNet.Master.NickName} has mod: {NetworkManager.MasterHasMod})");
+                _debugSlotInfo = debugSlotInfoNew;
+            }
         }
+
+        private static string Debug_ListToString(List<StatData> list) => string.Join(", ", list.ConvertAll(data => $"{data.Owner.NickName}:{data.HasMod}"));
 
         internal static void ForceSync() => Instance.DoSync();
         private void DoSync()
